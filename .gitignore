@@ -1,0 +1,28 @@
+# Git Ignore Rules
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# Environment and config files
+.env
+.env.local
+.env.*.local
+issue-config.yml
+
+# IDE/Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+
+# Logs and temporary files
+*.log
+coverage/

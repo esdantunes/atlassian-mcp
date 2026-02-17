@@ -1,0 +1,33 @@
+# Issue configuration for Jira issue creation.
+# Copy this file as issue-config.yml and fill in your project-specific values.
+
+# Default values applied when creating an issue.
+# Omit any key to not send that field unless provided in the request body.
+defaults:
+  # parent_key: "PROJ-1"
+  # issue_type: "Task"
+  # priority: "Medium"
+  # labels:
+  #   - label1
+  #   - label2
+  # components:
+  #   - component-name
+
+# Custom fields specific to your Jira project.
+# Each entry maps a human-readable name to its Jira custom field configuration.
+#
+#   field_id:          The Jira custom field ID (e.g. customfield_12345)
+#   format:            "single" for { id, value } or "array" for [{ id, value }]
+#   default_value:     The default value label to use when not provided in the request body
+#   default_option_id: The Jira option ID that corresponds to default_value
+#   options:           Map of human-readable values to their Jira option IDs
+#
+# custom_fields:
+#   my-custom-field:
+#     field_id: customfield_12345
+#     format: single
+#     default_value: "Option A"
+#     default_option_id: "10001"
+#     options:
+#       "Option A": "10001"
+#       "Option B": "10002"
