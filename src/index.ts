@@ -1,8 +1,14 @@
 import "dotenv/config";
-import { serve } from "@hono/node-server";
-import app from "./app.js";
+import { createMCPServer } from "./mcp/server.js";
 
-const port = Number(process.env.PORT) || 3000;
-serve({ fetch: app.fetch, port }, (info) => {
-  console.log(`Listening on http://localhost:${info.port}`);
-});
+async function main() {
+  try {
+    await createMCPServer();
+    console.error("Atlassian MCP server running on stdio");
+  } catch (error) {
+    console.error("Failed to start MCP server:", error);
+    process.exit(1);
+  }
+}
+
+main();

@@ -1,7 +1,7 @@
 {
-  "name": "atlassian-bot",
+  "name": "atlassian-mcp",
   "version": "1.0.0",
-  "description": "Utility for interacting with Atlassian APIs (primarily Jira Cloud)",
+  "description": "MCP server for interacting with Jira Cloud via Model Context Protocol",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,6 +16,8 @@
   "keywords": [
     "atlassian",
     "jira",
+    "mcp",
+    "model-context-protocol",
     "api",
     "typescript"
   ],
@@ -33,10 +35,13 @@
     "typescript-eslint": "8.56.0"
   },
   "dependencies": {
-    "@hono/node-server": "1.19.9",
+    "@modelcontextprotocol/sdk": "1.26.0",
     "dotenv": "17.3.1",
-    "hono": "4.11.9",
     "jira.js": "5.3.0",
-    "yaml": "^2.8.2"
+    "yaml": "2.8.2",
+    "zod": "4.3.6"
+  },
+  "overrides": {
+    "ajv": "8.18.0"
   }
 }

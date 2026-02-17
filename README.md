@@ -1,10 +1,10 @@
-# Atlassian Bot
+# Atlassian MCP Server
 
-REST API utility for interacting with Jira Cloud, designed to simplify issue creation and querying by using human-readable field names instead of Jira IDs, with configurable defaults to minimize required input.
+MCP (Model Context Protocol) server for interacting with Jira Cloud, designed to simplify issue creation and querying by using human-readable field names instead of Jira IDs, with configurable defaults to minimize required input.
 
 ## Purpose
 
-This project provides a simplified interface to Jira Cloud that:
+This project provides an MCP server that enables AI assistants (like Gemini CLI) to interact with Jira Cloud through a simplified interface that:
 - Uses human-readable field names instead of Jira custom field IDs
 - Supports configurable default values to minimize API payloads
 - Works with any Jira project through configuration files
@@ -13,14 +13,17 @@ This project provides a simplified interface to Jira Cloud that:
 ## Prerequisites
 
 - **Node.js**: >= 24.0.0
-- **Bun**: Latest version (package manager)
+- **Bun**: Latest version (package manager) - or npm/yarn
 - **Jira Cloud** account with API token
+- **Gemini CLI** (or another MCP-compatible client)
 
 ## Quick Start
 
 1. **Clone and install dependencies:**
    ```bash
    bun install
+   # or
+   npm install
    ```
 
 2. **Configure environment variables:**
@@ -41,14 +44,38 @@ This project provides a simplified interface to Jira Cloud that:
    ```
    Edit `issue-config.yml` with your project-specific defaults and custom field mappings.
 
-4. **Start the server:**
+4. **Build the project:**
    ```bash
-   bun run dev    # Development with hot reload
+   bun run build
    # or
-   bun run start  # Production build
+   npm run build
    ```
 
-The server runs on `http://localhost:3000` by default (configurable via `PORT` env var).
+5. **Configure Gemini CLI:**
+
+   **Via CLI command:**
+   ```bash
+   gemini mcp add atlassian-jira node dist/index.js
+   ```
+
+   **Or via settings.json** (`~/.gemini/settings.json` or `.gemini/settings.json`):
+   ```json
+   {
+     "mcpServers": {
+       "atlassian-jira": {
+         "command": "node",
+         "args": ["dist/index.js"],
+         "env": {
+           "JIRA_HOST": "${JIRA_HOST}",
+           "JIRA_EMAIL": "${JIRA_EMAIL}",
+           "JIRA_API_TOKEN": "${JIRA_API_TOKEN}",
+           "JIRA_PROJECT_KEY": "${JIRA_PROJECT_KEY}",
+           "ISSUE_CONFIG_PATH": "${ISSUE_CONFIG_PATH}"
+         }
+       }
+     }
+   }
+   ```
 
 ## Configuration
 
@@ -62,7 +89,6 @@ Required environment variables:
 | `JIRA_EMAIL` | Your Jira account email | `user@example.com` |
 | `JIRA_API_TOKEN` | Jira API token ([create one](https://id.atlassian.com/manage-profile/security/api-tokens)) | `ATATT3xFfGF0...` |
 | `JIRA_PROJECT_KEY` | Default Jira project key | `PROJ` |
-| `PORT` | Server port (optional, default: 3000) | `3000` |
 | `ISSUE_CONFIG_PATH` | Path to issue config file (optional, default: `issue-config.yml`) | `issue-config.yml` |
 
 ### `issue-config.yml` File
@@ -92,23 +118,25 @@ custom_fields:
 ```
 
 **Notes:**
-- Omit any `defaults` key to not send that field unless provided in the request body
+- Omit any `defaults` key to not send that field unless provided in the request
 - Custom fields map human-readable names to Jira field IDs and option IDs
 - See `issue-config.example.yml` for detailed documentation
 
-## API Endpoints
+## MCP Tools
 
-### GET `/jira/issues`
+The server exposes the following MCP tools:
+
+### `list_issues`
 
 List issues with pagination support.
 
-**Query Parameters:**
+**Parameters:**
 - `maxResults` (optional): Number of issues per page (default: 50, max: 5000)
 - `nextPageToken` (optional): Token from previous response for pagination
 
-**Example:**
-```bash
-curl 'http://localhost:3000/jira/issues?maxResults=10'
+**Example usage with Gemini CLI:**
+```
+/mcp call atlassian-jira list_issues {"maxResults": 10}
 ```
 
 **Response:**
@@ -133,13 +161,16 @@ curl 'http://localhost:3000/jira/issues?maxResults=10'
 }
 ```
 
-### GET `/jira/issues/:id`
+### `get_issue`
 
 Get a specific issue by ID or key.
 
-**Example:**
-```bash
-curl 'http://localhost:3000/jira/issues/PROJ-1'
+**Parameters:**
+- `id` (required): Issue ID or key (e.g., `PROJ-123`)
+
+**Example usage with Gemini CLI:**
+```
+/mcp call atlassian-jira get_issue {"id": "PROJ-1"}
 ```
 
 **Response:**
@@ -155,24 +186,20 @@ curl 'http://localhost:3000/jira/issues/PROJ-1'
 }
 ```
 
-### POST `/jira/issues`
+### `create_issue`
 
 Create a new issue.
 
-**Request Body:**
-```json
-{
-  "title": "Issue title (required)",
-  "description": "Optional description (string or ADF object)",
-  "priority": "High",
-  "parent": "PROJ-1",
-  "labels": ["label1", "label2"],
-  "components": "component-name",  // or ["component1", "component2"]
-  "reporter": "account-id",
-  "assignee": "account-id",        // or null to unassign
-  "custom-field-name": "value"     // Any custom field from issue-config.yml
-}
-```
+**Parameters:**
+- `title` (required): Issue title
+- `description` (optional): Description as plain text string or ADF object
+- `priority` (optional): Priority name (e.g., "High", "Medium", "Low")
+- `parent` (optional): Parent issue key (e.g., "PROJ-1")
+- `labels` (optional): Array of label strings
+- `components` (optional): Array of component names
+- `assignee` (optional): Account ID of assignee, or `null` to unassign
+- `reporter` (optional): Account ID of reporter
+- Any custom field names from `issue-config.yml`
 
 **Description Field:**
 
@@ -209,12 +236,6 @@ The `description` field accepts two formats:
                "type": "text", 
                "text": "bold", 
                "marks": [{ "type": "strong" }] 
-             },
-             { "type": "text", "text": " and " },
-             { 
-               "type": "text", 
-               "text": "italic", 
-               "marks": [{ "type": "em" }] 
              }
            ]
          }
@@ -225,45 +246,12 @@ The `description` field accepts two formats:
 
    ADF supports: headings, bold/italic, lists, tables, links, code blocks, and more. See [Atlassian Document Format documentation](https://developer.atlassian.com/cloud/jira/platform/apis/document/structure) for full specification.
 
-**Example (plain text):**
-```bash
-curl -X POST 'http://localhost:3000/jira/issues' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "title": "New issue",
-    "description": "Issue description",
-    "priority": "High"
-  }'
+**Example usage with Gemini CLI:**
+```
+/mcp call atlassian-jira create_issue {"title": "New issue", "description": "Issue description", "priority": "High"}
 ```
 
-**Example (ADF formatted):**
-```bash
-curl -X POST 'http://localhost:3000/jira/issues' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "title": "New issue",
-    "description": {
-      "version": 1,
-      "type": "doc",
-      "content": [
-        {
-          "type": "heading",
-          "attrs": { "level": 1 },
-          "content": [{ "type": "text", "text": "Title" }]
-        },
-        {
-          "type": "paragraph",
-          "content": [
-            { "type": "text", "text": "Formatted " },
-            { "type": "text", "text": "text", "marks": [{ "type": "strong" }] }
-          ]
-        }
-      ]
-    }
-  }'
-```
-
-**Response (201):**
+**Response:**
 ```json
 {
   "id": "2599962",
@@ -273,44 +261,31 @@ curl -X POST 'http://localhost:3000/jira/issues' \
 ```
 
 **Behavior:**
-- Fields provided in the request body override defaults
+- Fields provided override defaults
 - Fields not provided use defaults from `issue-config.yml` (if configured)
 - Fields without defaults are omitted from the Jira API request
 
-### PATCH `/jira/issues/:id`
+### `update_issue`
 
 Update an existing issue. Only provided fields will be updated (partial update).
 
-**Path Parameters:**
+**Parameters:**
 - `id` (required): Issue ID or key (e.g., `PROJ-123`)
+- `title` (optional): New title
+- `description` (optional): New description (string or ADF object)
+- `priority` (optional): New priority
+- `parent` (optional): New parent issue key
+- `labels` (optional): New array of labels
+- `components` (optional): New array of components
+- `assignee` (optional): New assignee account ID, or `null` to unassign
+- Any custom field names from `issue-config.yml`
 
-**Request Body:**
-All fields are optional. Only fields provided will be updated:
-```json
-{
-  "title": "Updated title",
-  "description": "Updated description (string or ADF object)",
-  "priority": "High",
-  "assignee": "account-id",  // or null to unassign
-  "parent": "PROJ-1",
-  "labels": ["label1", "label2"],
-  "components": "component-name",  // or ["component1", "component2"]
-  "custom-field-name": "value"     // Any custom field from issue-config.yml
-}
+**Example usage with Gemini CLI:**
+```
+/mcp call atlassian-jira update_issue {"id": "PROJ-123", "title": "Updated title", "priority": "High"}
 ```
 
-**Example:**
-```bash
-curl -X PATCH 'http://localhost:3000/jira/issues/PROJ-123' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "title": "Updated title",
-    "priority": "High",
-    "assignee": null
-  }'
-```
-
-**Response (200):**
+**Response:**
 ```json
 {
   "success": true,
@@ -319,35 +294,81 @@ curl -X PATCH 'http://localhost:3000/jira/issues/PROJ-123' \
 ```
 
 **Behavior:**
-- Only fields provided in the request body are updated
+- Only fields provided in the request are updated
 - Fields not provided remain unchanged
 - At least one field must be provided
-- Supports same `description` formats as POST (string or ADF object)
-- Custom fields work the same way as in POST
+- Supports same `description` formats as `create_issue`
+- Custom fields work the same way as in `create_issue`
 
 ## Development
 
 ```bash
-bun run dev      # Start development server with hot reload
+bun run dev      # Start development server with hot reload (tsx watch)
 bun run build    # Build for production
 bun run start    # Run production build
 bun run lint     # Run ESLint
 ```
+
+## Testing with Gemini CLI
+
+After configuring the MCP server, you can test it:
+
+1. **List available tools:**
+   ```
+   /mcp list
+   ```
+
+2. **List tools from this server:**
+   ```
+   /mcp tools atlassian-jira
+   ```
+
+3. **Call a tool:**
+   ```
+   /mcp call atlassian-jira list_issues {"maxResults": 5}
+   ```
 
 ## Project Structure
 
 ```
 .
 ├── src/
-│   ├── config/         # Configuration loaders (Jira, issue defaults)
-│   ├── lib/            # Jira client and issue field builders
-│   ├── routes/         # API route handlers
-│   ├── types/          # TypeScript type definitions
-│   └── utils/          # Utility functions (JSON response helpers)
-├── issue-config.yml    # Issue defaults and custom field mappings (gitignored)
-├── issue-config.example.yml  # Template for issue configuration
-└── .env                # Environment variables (gitignored)
+│   ├── mcp/
+│   │   ├── server.ts          # MCP server initialization
+│   │   └── tools.ts            # Tool registration and routing
+│   ├── handlers/
+│   │   ├── list-issues.ts     # Handler for list_issues tool
+│   │   ├── get-issue.ts       # Handler for get_issue tool
+│   │   ├── create-issue.ts    # Handler for create_issue tool
+│   │   └── update-issue.ts    # Handler for update_issue tool
+│   ├── config/                # Configuration loaders (Jira, issue defaults)
+│   ├── lib/                   # Jira client and issue field builders
+│   ├── types/                 # TypeScript type definitions
+│   └── index.ts               # Entry point
+├── .env                       # Environment variables (gitignored)
+├── .env.example               # Environment variables template
+├── issue-config.yml           # Issue defaults and custom field mappings (gitignored)
+├── issue-config.example.yml   # Issue configuration template
+├── tsconfig.json              # TypeScript configuration
+├── eslint.config.js           # ESLint configuration
+└── package.json               # Project dependencies and scripts
 ```
+
+## Security Notes
+
+### Known Vulnerabilities
+
+The project may show a moderate vulnerability in `ajv` (< 8.18.0) when running `bun audit`. This vulnerability affects:
+
+- **ESLint** (development dependency only)
+- **@modelcontextprotocol/sdk** (transitive dependency)
+
+**Impact:** This is a moderate severity ReDoS (Regular Expression Denial of Service) vulnerability that only affects the `$data` option in ajv. Since:
+1. This is a development-time dependency (ESLint)
+2. The vulnerability requires specific usage patterns (`$data` option) that are not used in this project's runtime code
+3. ESLint 10.0.0 does not yet support ajv 8.x (required for the fix)
+
+**Status:** This vulnerability does not affect the production runtime of the MCP server. The ESLint maintainers are aware of this issue and will address it in a future release.
 
 ## License
 
