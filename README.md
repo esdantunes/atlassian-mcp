@@ -147,6 +147,18 @@ List issues with pagination support.
       "id": "PROJ-1",
       "title": "Issue title",
       "description": "Issue description",
+      "descriptionAdf": {
+        "version": 1,
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              { "type": "text", "text": "Issue description" }
+            ]
+          }
+        ]
+      },
       "status": "To Do",
       "priority": "Medium",
       "reporter": {
@@ -160,6 +172,8 @@ List issues with pagination support.
   "nextPageToken": "token-for-next-page"
 }
 ```
+
+**Note:** The `description` field always contains plain text for backward compatibility. The `descriptionAdf` field (optional) contains the full ADF (Atlassian Document Format) structure with all formatting preserved when available. Use `descriptionAdf` when you need to preserve or work with rich text formatting.
 
 ### `get_issue`
 
@@ -179,12 +193,26 @@ Get a specific issue by ID or key.
   "id": "PROJ-1",
   "title": "Issue title",
   "description": "Issue description",
+  "descriptionAdf": {
+    "version": 1,
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          { "type": "text", "text": "Issue description" }
+        ]
+      }
+    ]
+  },
   "status": "In Progress",
   "priority": "High",
   "reporter": { ... },
   "assignee": { ... }
 }
 ```
+
+**Note:** The `description` field always contains plain text for backward compatibility. The `descriptionAdf` field (optional) contains the full ADF (Atlassian Document Format) structure with all formatting preserved when available. Use `descriptionAdf` when you need to preserve or work with rich text formatting.
 
 ### `create_issue`
 

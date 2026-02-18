@@ -35,6 +35,21 @@ function descriptionToPlainText(doc: unknown): string {
   return parts.join(" ").trim();
 }
 
+function extractAdfDescription(doc: unknown): { type: "doc"; version: number; content: unknown[] } | undefined {
+  if (doc == null) return undefined;
+  if (typeof doc === "string") return undefined;
+  const d = doc as { type?: string; version?: number; content?: unknown[] };
+  // Check if it's a valid ADF structure
+  if (d.type === "doc" && typeof d.version === "number" && Array.isArray(d.content)) {
+    return {
+      type: "doc",
+      version: d.version,
+      content: d.content,
+    };
+  }
+  return undefined;
+}
+
 function toUserDetails(user: { accountId?: string; displayName?: string; emailAddress?: string } | null | undefined): UserDetails | null {
   if (!user) return null;
   return {
@@ -46,7 +61,9 @@ function toUserDetails(user: { accountId?: string; displayName?: string; emailAd
 
 export function toSimplifiedIssue(issue: Version3.Version3Models.Issue): SimplifiedIssue {
   const fields = (issue.fields ?? {}) as Version3.Version3Models.Fields;
-  return {
+  const descriptionAdf = extractAdfDescription(fields.description);
+  
+  const result: SimplifiedIssue = {
     id: issue.key ?? issue.id,
     title: fields.summary ?? "",
     description: descriptionToPlainText(fields.description),
@@ -55,4 +72,11 @@ export function toSimplifiedIssue(issue: Version3.Version3Models.Issue): Simplif
     reporter: toUserDetails(fields.reporter ?? null),
     assignee: toUserDetails(fields.assignee ?? null),
   };
+  
+  // Only include descriptionAdf if it's a valid ADF object
+  if (descriptionAdf) {
+    result.descriptionAdf = descriptionAdf;
+  }
+  
+  return result;
 }

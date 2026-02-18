@@ -8,6 +8,7 @@ export interface SimplifiedIssue {
   id: string;
   title: string;
   description: string;
+  descriptionAdf?: { type: "doc"; version: number; content: unknown[] };
   status: string;
   priority: string;
   reporter: UserDetails | null;
