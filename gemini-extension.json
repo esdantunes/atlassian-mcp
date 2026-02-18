@@ -1,0 +1,43 @@
+{
+  "name": "atlassian-mcp",
+  "version": "1.0.0",
+  "mcpServers": {
+    "atlassian-jira": {
+      "command": "node",
+      "args": ["${extensionPath}${/}dist${/}index.js"],
+      "cwd": "${extensionPath}",
+      "env": {
+        "ISSUE_CONFIG_PATH": "${extensionPath}${/}issue-config.yml"
+      }
+    }
+  },
+  "contextFileName": "README.md",
+  "settings": [
+    {
+      "name": "Jira Host",
+      "description": "Your Jira Cloud instance URL (e.g., https://company.atlassian.net)",
+      "envVar": "JIRA_HOST"
+    },
+    {
+      "name": "Jira Email",
+      "description": "Your Jira account email",
+      "envVar": "JIRA_EMAIL"
+    },
+    {
+      "name": "Jira API Token",
+      "description": "Your Jira API token",
+      "envVar": "JIRA_API_TOKEN",
+      "sensitive": true
+    },
+    {
+      "name": "Project Key",
+      "description": "Default Jira project key (e.g., PROJ)",
+      "envVar": "JIRA_PROJECT_KEY"
+    },
+    {
+      "name": "Config Path",
+      "description": "Path to issue-config.yml (optional)",
+      "envVar": "ISSUE_CONFIG_PATH"
+    }
+  ]
+}
