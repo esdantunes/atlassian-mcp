@@ -29,7 +29,7 @@ export async function handleUpdateIssue(
 
     const body: UpdateIssueBody = {
       title: updateFields.title,
-      description: updateFields.description as string | { type: "doc"; version: number; content: unknown[] } | undefined,
+      description: updateFields.description,
       priority: updateFields.priority,
       parent: updateFields.parent,
       labels: updateFields.labels,

@@ -30,7 +30,7 @@ export async function handleCreateIssue(
 
     const body: CreateIssueBody = {
       title: args.title,
-      description: args.description as string | { type: "doc"; version: number; content: unknown[] } | undefined,
+      description: args.description,
       priority: args.priority,
       parent: args.parent,
       labels: args.labels,
