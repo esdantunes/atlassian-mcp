@@ -13,58 +13,89 @@ This project provides an MCP server that enables AI assistants (like Gemini CLI)
 ## Prerequisites
 
 - **Node.js**: >= 24.0.0
-- **Bun**: Latest version (package manager) - or npm/yarn
 - **Jira Cloud** account with API token
 - **Gemini CLI** (or another MCP-compatible client)
 
-## Quick Start
+## Installation
+
+### Option 1: Install via NPM (Recommended)
+
+If this package is published on npm:
+
+```bash
+# Install globally
+npm install -g @your-username/atlassian-mcp
+
+# Or install locally in your project
+npm install @your-username/atlassian-mcp
+
+# Or use directly without installation
+npx @your-username/atlassian-mcp
+```
+
+Then configure in `~/.gemini/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "atlassian-jira": {
+      "command": "npx",
+      "args": ["@your-username/atlassian-mcp"],
+      "env": {
+        "JIRA_HOST": "${JIRA_HOST}",
+        "JIRA_EMAIL": "${JIRA_EMAIL}",
+        "JIRA_API_TOKEN": "${JIRA_API_TOKEN}",
+        "JIRA_PROJECT_KEY": "${JIRA_PROJECT_KEY}",
+        "ISSUE_CONFIG_PATH": "${ISSUE_CONFIG_PATH}"
+      }
+    }
+  }
+}
+```
+
+### Option 2: Install from Git Repository
+
+```bash
+npm install git+https://github.com/your-username/atlassian-mcp.git
+```
+
+### Option 3: Install from Local Development
 
 1. **Clone and install dependencies:**
    ```bash
-   bun install
-   # or
+   git clone https://github.com/your-username/atlassian-mcp.git
+   cd atlassian-mcp
    npm install
-   ```
-
-2. **Configure environment variables:**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` with your Jira credentials:
-   ```env
-   JIRA_HOST=https://your-domain.atlassian.net
-   JIRA_EMAIL=your-email@example.com
-   JIRA_API_TOKEN=your-api-token-here
-   JIRA_PROJECT_KEY=YOUR_PROJECT_KEY
-   ```
-
-3. **Configure issue defaults and custom fields:**
-   ```bash
-   cp issue-config.example.yml issue-config.yml
-   ```
-   Edit `issue-config.yml` with your project-specific defaults and custom field mappings.
-
-4. **Build the project:**
-   ```bash
-   bun run build
    # or
-   npm run build
+   bun install
    ```
 
-5. **Configure Gemini CLI:**
-
-   **Via CLI command:**
+2. **Build the project:**
    ```bash
-   gemini mcp add atlassian-jira node dist/index.js
+   npm run build
+   # or
+   bun run build
    ```
 
-   **Or via settings.json** (`~/.gemini/settings.json` or `.gemini/settings.json`):
+3. **Configure Gemini CLI:**
+
+   **Option A: Using gemini-extension.json (automatic detection)**
+   
+   Place the project in `~/.gemini/extensions/atlassian-mcp/` or create a symbolic link:
+   ```bash
+   ln -s $(pwd) ~/.gemini/extensions/atlassian-mcp
+   ```
+
+   **Option B: Manual configuration in settings.json**
+   
+   Edit `~/.gemini/settings.json`:
    ```json
    {
      "mcpServers": {
        "atlassian-jira": {
          "command": "node",
-         "args": ["dist/index.js"],
+         "args": ["/absolute/path/to/atlassian-mcp/dist/index.js"],
+         "cwd": "/absolute/path/to/atlassian-mcp",
          "env": {
            "JIRA_HOST": "${JIRA_HOST}",
            "JIRA_EMAIL": "${JIRA_EMAIL}",
@@ -76,6 +107,50 @@ This project provides an MCP server that enables AI assistants (like Gemini CLI)
      }
    }
    ```
+
+## Quick Start
+
+After installation, configure your environment:
+
+1. **Configure environment variables:**
+
+   Create a `.env` file or set environment variables:
+   ```env
+   JIRA_HOST=https://your-domain.atlassian.net
+   JIRA_EMAIL=your-email@example.com
+   JIRA_API_TOKEN=your-api-token-here
+   JIRA_PROJECT_KEY=YOUR_PROJECT_KEY
+   ```
+
+   **Get your Jira API token:** [Create one here](https://id.atlassian.com/manage-profile/security/api-tokens)
+
+2. **Configure issue defaults and custom fields:**
+
+   Copy the example config:
+   ```bash
+   cp issue-config.example.yml issue-config.yml
+   ```
+   
+   Edit `issue-config.yml` with your project-specific defaults and custom field mappings.
+
+3. **Set the config path (if not using default):**
+
+   If your `issue-config.yml` is not in the project root, set:
+   ```bash
+   export ISSUE_CONFIG_PATH=/path/to/issue-config.yml
+   ```
+
+4. **Test the installation:**
+
+   ```bash
+   # List available MCP tools
+   gemini mcp list
+
+   # Or in Gemini CLI chat
+   /mcp tools atlassian-jira
+   ```
+
+For detailed distribution options, see [DISTRIBUTION.md](./DISTRIBUTION.md).
 
 ## Configuration
 

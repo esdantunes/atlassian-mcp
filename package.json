@@ -5,6 +5,16 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "atlassian-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "issue-config.example.yml",
+    "gemini-extension.json",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
@@ -19,10 +29,22 @@
     "mcp",
     "model-context-protocol",
     "api",
-    "typescript"
+    "typescript",
+    "gemini",
+    "gemini-cli",
+    "ai",
+    "automation"
   ],
   "author": "Eduardo Antunes",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/atlassian-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/atlassian-mcp/issues"
+  },
+  "homepage": "https://github.com/your-username/atlassian-mcp#readme",
   "engines": {
     "node": ">=24.0.0"
   },

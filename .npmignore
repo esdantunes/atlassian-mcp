@@ -1,0 +1,53 @@
+# Files and directories that should NOT be included in the npm package
+
+# TypeScript source code (only dist/ is needed)
+src/
+*.ts
+!*.d.ts
+
+# Development files
+tsconfig.json
+eslint.config.js
+.gitignore
+.npmignore
+
+# Dependencies
+node_modules/
+
+# Temporary build files
+*.tsbuildinfo
+
+# Environment and user configuration files
+.env
+.env.*
+!.env.example
+issue-config.yml
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test and coverage files
+coverage/
+*.test.ts
+*.spec.ts
+
+# Temporary files
+*.tmp
+*.temp
+
+# Development documentation (optional - can include if desired)
+# DISTRIBUTION.md
