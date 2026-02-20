@@ -122,6 +122,102 @@ custom_fields:
 - Custom fields map human-readable names to Jira field IDs and option IDs
 - See `issue-config.example.yml` for detailed documentation
 
+## Description Field Formats
+
+The `description` field in `create_issue` and `update_issue` accepts **two distinct formats**:
+
+### 1. Plain Text String
+
+**When to use:** For simple, unformatted text descriptions.
+
+**Format:** A simple string value.
+
+**Example:**
+```json
+{
+  "title": "New issue",
+  "description": "This is a simple text description"
+}
+```
+
+**Behavior:** The MCP server automatically converts plain text strings to basic ADF format (single paragraph).
+
+### 2. ADF (Atlassian Document Format) Object
+
+**When to use:** 
+- When you need rich text formatting (headings, bold, italic, lists, tables, code blocks, links, etc.)
+- **CRITICAL for updates:** When updating an issue that already has formatted content, you MUST pass the ADF object from the `descriptionAdf` field to preserve existing formatting. Passing plain text will replace all formatting.
+
+**Format:** A JSON object with the ADF structure.
+
+**Required structure:**
+```json
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    // Array of ADF nodes (paragraphs, headings, lists, etc.)
+  ]
+}
+```
+
+**Example with formatting:**
+```json
+{
+  "title": "New issue",
+  "description": {
+    "type": "doc",
+    "version": 1,
+    "content": [
+      {
+        "type": "heading",
+        "attrs": { "level": 1 },
+        "content": [
+          { "type": "text", "text": "Main Heading" }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          { "type": "text", "text": "Text with " },
+          { 
+            "type": "text", 
+            "text": "bold", 
+            "marks": [{ "type": "strong" }] 
+          },
+          { "type": "text", "text": " and " },
+          { 
+            "type": "text", 
+            "text": "italic", 
+            "marks": [{ "type": "em" }] 
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [{ "type": "text", "text": "First item" }]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Important Notes:**
+- ADF supports: headings (levels 1-6), bold (`strong`), italic (`em`), code (`code`), links, bullet lists, ordered lists, tables, code blocks, blockquotes, and more
+- When reading issues via `get_issue` or `list_issues`, check the `descriptionAdf` field to get the full ADF structure with formatting preserved
+- **For updates:** Always use the `descriptionAdf` object from the existing issue when updating to preserve formatting. Converting `descriptionAdf` to plain text and back will lose all formatting.
+- See [Atlassian Document Format documentation](https://developer.atlassian.com/cloud/jira/platform/apis/document/structure) for the complete ADF specification
+
 ## MCP Tools
 
 The server exposes the following MCP tools:
@@ -231,48 +327,11 @@ Create a new issue.
 
 **Description Field:**
 
-The `description` field accepts two formats:
+The `description` parameter accepts two formats: **plain text string** or **ADF object**. See the [Description Field Formats](#description-field-formats) section above for detailed information and examples.
 
-1. **Plain text string** - Automatically converted to basic ADF format:
-   ```json
-   {
-     "title": "New issue",
-     "description": "Simple text description"
-   }
-   ```
-
-2. **ADF (Atlassian Document Format) object** - Full rich text formatting support:
-   ```json
-   {
-     "title": "New issue",
-     "description": {
-       "version": 1,
-       "type": "doc",
-       "content": [
-         {
-           "type": "heading",
-           "attrs": { "level": 1 },
-           "content": [
-             { "type": "text", "text": "Heading 1" }
-           ]
-         },
-         {
-           "type": "paragraph",
-           "content": [
-             { "type": "text", "text": "Text with " },
-             { 
-               "type": "text", 
-               "text": "bold", 
-               "marks": [{ "type": "strong" }] 
-             }
-           ]
-         }
-       ]
-     }
-   }
-   ```
-
-   ADF supports: headings, bold/italic, lists, tables, links, code blocks, and more. See [Atlassian Document Format documentation](https://developer.atlassian.com/cloud/jira/platform/apis/document/structure) for full specification.
+**Quick reference:**
+- Use plain text string for simple, unformatted descriptions
+- Use ADF object for rich text formatting (headings, bold, italic, lists, tables, code blocks, etc.)
 
 **Example usage with Gemini CLI:**
 ```
@@ -308,6 +367,27 @@ Update an existing issue. Only provided fields will be updated (partial update).
 - `assignee` (optional): New assignee account ID, or `null` to unassign
 - Any custom field names from `issue-config.yml`
 
+**Description Field - IMPORTANT for Updates:**
+
+The `description` parameter accepts two formats: **plain text string** or **ADF object**. See the [Description Field Formats](#description-field-formats) section above for detailed information and examples.
+
+**⚠️ CRITICAL for preserving formatting:** When updating an issue that already has formatted content (from `descriptionAdf` field), you **MUST** pass the ADF object directly to preserve existing formatting. Passing plain text will **replace all formatting** with unformatted text.
+
+**Example preserving formatting:**
+```json
+{
+  "id": "PROJ-123",
+  "description": {
+    "type": "doc",
+    "version": 1,
+    "content": [
+      // Use the descriptionAdf object from get_issue/list_issues
+      // Modify content as needed, but keep the ADF structure
+    ]
+  }
+}
+```
+
 **Example usage with Gemini CLI:**
 ```
 /mcp call atlassian-jira update_issue {"id": "PROJ-123", "title": "Updated title", "priority": "High"}
@@ -325,7 +405,6 @@ Update an existing issue. Only provided fields will be updated (partial update).
 - Only fields provided in the request are updated
 - Fields not provided remain unchanged
 - At least one field must be provided
-- Supports same `description` formats as `create_issue`
 - Custom fields work the same way as in `create_issue`
 
 ## Development

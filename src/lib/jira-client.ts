@@ -39,7 +39,6 @@ function extractAdfDescription(doc: unknown): { type: "doc"; version: number; co
   if (doc == null) return undefined;
   if (typeof doc === "string") return undefined;
   const d = doc as { type?: string; version?: number; content?: unknown[] };
-  // Check if it's a valid ADF structure
   if (d.type === "doc" && typeof d.version === "number" && Array.isArray(d.content)) {
     return {
       type: "doc",
@@ -73,7 +72,6 @@ export function toSimplifiedIssue(issue: Version3.Version3Models.Issue): Simplif
     assignee: toUserDetails(fields.assignee ?? null),
   };
   
-  // Only include descriptionAdf if it's a valid ADF object
   if (descriptionAdf) {
     result.descriptionAdf = descriptionAdf;
   }

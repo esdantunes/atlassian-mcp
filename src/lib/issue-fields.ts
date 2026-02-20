@@ -37,35 +37,42 @@ function textToAdf(text: string): { type: "doc"; version: number; content: unkno
   return { type: "doc", version: 1, content: paragraphs };
 }
 
+function isValidAdfObject(obj: unknown): obj is { type: "doc"; version: number; content: unknown[] } {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+    return false;
+  }
+  
+  const adf = obj as Record<string, unknown>;
+  return (
+    adf.type === "doc" &&
+    typeof adf.version === "number" &&
+    Array.isArray(adf.content)
+  );
+}
+
 function processDescription(description: string | { type: "doc"; version: number; content: unknown[] } | Record<string, unknown> | undefined): { type: "doc"; version: number; content: unknown[] } {
   if (!description) {
     return textToAdf("");
   }
   
   if (typeof description === "string") {
-    // Try to parse as JSON ADF object if it looks like JSON
     const trimmed = description.trim();
-    if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
       try {
         const parsed = JSON.parse(description);
-        // Check if it's a valid ADF object structure
-        if (parsed && typeof parsed === "object" && parsed.type === "doc" && parsed.version && Array.isArray(parsed.content)) {
-          return parsed as { type: "doc"; version: number; content: unknown[] };
+        if (isValidAdfObject(parsed)) {
+          return parsed;
         }
       } catch {
-        // If JSON parsing fails, treat as plain text
       }
     }
     return textToAdf(description);
   }
   
-  // If it's already an object, check if it's a valid ADF structure
-  if (description && typeof description === "object") {
-    // Check if it's a Record that can be converted to ADF
-    if ("type" in description && description.type === "doc" && "version" in description && "content" in description) {
-      return description as { type: "doc"; version: number; content: unknown[] };
+  if (description && typeof description === "object" && !Array.isArray(description)) {
+    if (isValidAdfObject(description)) {
+      return description;
     }
-    // If it's a Record but not ADF structure, convert to string and process
     try {
       const asString = JSON.stringify(description);
       return textToAdf(asString);
@@ -74,7 +81,7 @@ function processDescription(description: string | { type: "doc"; version: number
     }
   }
   
-  return description as { type: "doc"; version: number; content: unknown[] };
+  return textToAdf(String(description));
 }
 
 function resolveValue<T>(bodyValue: T | undefined, defaultValue: unknown): T | undefined {

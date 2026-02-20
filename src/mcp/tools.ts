@@ -56,8 +56,37 @@ export function registerTools(server: Server): void {
               description: "Issue title (required)",
             },
             description: {
-              type: "string",
-              description: "Issue description as plain text or ADF (Atlassian Document Format) object",
+              oneOf: [
+                {
+                  type: "string",
+                  description: "Plain text description (automatically converted to basic ADF format)",
+                  examples: ["Simple text description"],
+                },
+                {
+                  type: "object",
+                  description: "ADF (Atlassian Document Format) object for rich text formatting",
+                  properties: {
+                    type: { type: "string", const: "doc" },
+                    version: { type: "number" },
+                    content: { type: "array" },
+                  },
+                  required: ["type", "version", "content"],
+                  examples: [
+                    {
+                      type: "doc",
+                      version: 1,
+                      content: [
+                        {
+                          type: "paragraph",
+                          content: [{ type: "text", text: "Issue description" }],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+              description:
+                "Issue description. Use plain text string for simple descriptions, or ADF object for rich text formatting (headings, bold, italic, lists, tables, code blocks, etc.). When updating an issue with existing ADF formatting, prefer passing the ADF object directly (from descriptionAdf field) to preserve formatting. See https://developer.atlassian.com/cloud/jira/platform/apis/document/structure for ADF specification.",
             },
             priority: {
               type: "string",
@@ -104,8 +133,37 @@ export function registerTools(server: Server): void {
               description: "New issue title",
             },
             description: {
-              type: "string",
-              description: "New issue description as plain text or ADF object",
+              oneOf: [
+                {
+                  type: "string",
+                  description: "Plain text description (automatically converted to basic ADF format)",
+                  examples: ["Simple text description"],
+                },
+                {
+                  type: "object",
+                  description: "ADF (Atlassian Document Format) object for rich text formatting",
+                  properties: {
+                    type: { type: "string", const: "doc" },
+                    version: { type: "number" },
+                    content: { type: "array" },
+                  },
+                  required: ["type", "version", "content"],
+                  examples: [
+                    {
+                      type: "doc",
+                      version: 1,
+                      content: [
+                        {
+                          type: "paragraph",
+                          content: [{ type: "text", text: "Issue description" }],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+              description:
+                "New issue description. Use plain text string for simple descriptions, or ADF object for rich text formatting (headings, bold, italic, lists, tables, code blocks, etc.). IMPORTANT: When updating an issue that already has ADF formatting, always pass the ADF object (from descriptionAdf field) to preserve existing formatting. Passing plain text will replace all formatting. See https://developer.atlassian.com/cloud/jira/platform/apis/document/structure for ADF specification.",
             },
             priority: {
               type: "string",
