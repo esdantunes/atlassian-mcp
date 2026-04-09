@@ -194,6 +194,7 @@ custom_fields:
 
 **Notes:**
 - Omit any `defaults` key to not send that field unless provided in the request
+- Query tools use `JIRA_PROJECT_KEY` (from MCP/env) as the default project source
 - Custom fields map human-readable names to Jira field IDs and option IDs
 - See `issue-config.example.yml` for detailed documentation
 
@@ -384,6 +385,28 @@ Get a specific issue by ID or key.
 ```
 
 **Note:** The `description` field always contains plain text for backward compatibility. The `descriptionAdf` field (optional) contains the full ADF (Atlassian Document Format) structure with all formatting preserved when available. Use `descriptionAdf` when you need to preserve or work with rich text formatting.
+
+### `query_issues`
+
+Run Jira queries using raw JQL with optional fields and pagination.
+
+**Parameters:**
+- `jql` (required): Raw JQL query to execute
+- `fields` (optional): Jira fields to return (defaults to `summary`, `description`, `status`, `priority`, `reporter`, `assignee`)
+- `maxResults` (optional): Number of issues per page (default: 50, max: 5000)
+- `nextPageToken` (optional): Token from previous response for pagination
+- `project` (optional): Project override used only when JQL does not include a project clause
+
+**Project default precedence:**
+- If JQL already includes a project clause (`project = ...` or `project in (...)`), it is used exactly as provided
+- If JQL has no project clause, `JIRA_PROJECT_KEY` from MCP/env is injected automatically
+- If `project` is provided in the MCP request and JQL has no project clause, that override is used instead of `JIRA_PROJECT_KEY`
+- `issue-config.yml` is not used as a default project source for query operations
+
+**Example usage with Gemini CLI:**
+```
+/mcp call atlassian-jira query_issues {"jql":"issue in portfolioChildIssuesOf(\"JIRA-864\") AND labels IN (architecture, devops) ORDER BY priority DESC, created, parent, key DESC","maxResults":20}
+```
 
 ### `create_issue`
 

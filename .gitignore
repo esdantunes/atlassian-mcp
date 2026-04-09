@@ -26,3 +26,5 @@ issue-config.yml
 # Logs and temporary files
 *.log
 coverage/
+
+.gitnexus/

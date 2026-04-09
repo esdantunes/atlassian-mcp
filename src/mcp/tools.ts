@@ -8,6 +8,7 @@ import { handleListIssues } from "../handlers/list-issues.js";
 import { handleGetIssue } from "../handlers/get-issue.js";
 import { handleCreateIssue } from "../handlers/create-issue.js";
 import { handleUpdateIssue } from "../handlers/update-issue.js";
+import { handleQueryIssues } from "../handlers/query-issues.js";
 
 export function registerTools(server: Server): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -116,6 +117,41 @@ export function registerTools(server: Server): void {
             },
           },
           required: ["title"],
+        },
+      },
+      {
+        name: "query_issues",
+        description:
+          "Run raw JQL queries with optional fields and pagination. Uses JIRA_PROJECT_KEY by default when JQL has no project clause.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            jql: {
+              type: "string",
+              description: "Raw JQL query string",
+            },
+            fields: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional Jira fields to return",
+            },
+            maxResults: {
+              type: "number",
+              description: "Maximum number of results per page (default: 50, max: 5000)",
+              minimum: 1,
+              maximum: 5000,
+            },
+            nextPageToken: {
+              type: "string",
+              description: "Pagination token from a previous response to get the next page",
+            },
+            project: {
+              type: "string",
+              description:
+                "Optional project override used only when the provided JQL has no explicit project clause",
+            },
+          },
+          required: ["jql"],
         },
       },
       {
@@ -244,6 +280,18 @@ export function registerTools(server: Server): void {
           });
           const validated = schema.parse(args || {});
           return await handleUpdateIssue(validated);
+        }
+
+        case "query_issues": {
+          const schema = z.object({
+            jql: z.string().min(1),
+            fields: z.array(z.string().min(1)).optional(),
+            maxResults: z.number().int().min(1).max(5000).optional(),
+            nextPageToken: z.string().optional(),
+            project: z.string().min(1).optional(),
+          });
+          const validated = schema.parse(args || {});
+          return await handleQueryIssues(validated);
         }
 
         default:
