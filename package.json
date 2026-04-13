@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "atlassian-mcp": "./dist/index.js"
+    "atlassian-mcp": "dist/index.js"
   },
   "files": [
     "dist",
@@ -39,12 +39,16 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/esdantunes/atlassian-mcp.git"
+    "url": "git+https://github.com/esdantunes/atlassian-mcp.git"
   },
   "bugs": {
     "url": "https://github.com/esdantunes/atlassian-mcp/issues"
   },
   "homepage": "https://github.com/esdantunes/atlassian-mcp#readme",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "engines": {
     "node": ">=24.0.0"
   },
