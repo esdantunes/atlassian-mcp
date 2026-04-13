@@ -18,29 +18,39 @@ This project provides an MCP server that enables AI assistants (like Gemini CLI)
 
 ## Installation
 
-### Option 1: Install via NPM (Recommended)
+### Option 1: Run via npx (Recommended)
 
-If this package is published on npm:
+Use this package directly from npm without local installation:
 
 ```bash
-# Install globally
-npm install -g @your-username/atlassian-mcp
-
-# Or install locally in your project
-npm install @your-username/atlassian-mcp
-
-# Or use directly without installation
-npx @your-username/atlassian-mcp
+npx -y @esdantunes/atlassian-mcp@latest
 ```
 
-Then configure in `~/.gemini/settings.json`:
+### Option 2: Install globally
+
+```bash
+npm install -g @esdantunes/atlassian-mcp
+```
+
+### Option 3: Local development
+
+```bash
+git clone https://github.com/esdantunes/atlassian-mcp.git
+cd atlassian-mcp
+npm install
+npm run build
+```
+
+## Quick Setup (Gemini CLI + Cursor)
+
+Use the same MCP server block for both clients:
 
 ```json
 {
   "mcpServers": {
     "atlassian-jira": {
       "command": "npx",
-      "args": ["@your-username/atlassian-mcp"],
+      "args": ["-y", "@esdantunes/atlassian-mcp@latest"],
       "env": {
         "JIRA_HOST": "${JIRA_HOST}",
         "JIRA_EMAIL": "${JIRA_EMAIL}",
@@ -53,60 +63,13 @@ Then configure in `~/.gemini/settings.json`:
 }
 ```
 
-### Option 2: Install from Git Repository
+Where to put it:
+- **Gemini CLI:** `~/.gemini/settings.json` under `mcpServers`
+- **Cursor:** `.cursor/mcp.json` in your workspace (or your global Cursor MCP config)
 
-```bash
-npm install git+https://github.com/your-username/atlassian-mcp.git
-```
-
-### Option 3: Install from Local Development
-
-1. **Clone and install dependencies:**
-   ```bash
-   git clone https://github.com/your-username/atlassian-mcp.git
-   cd atlassian-mcp
-   npm install
-   # or
-   bun install
-   ```
-
-2. **Build the project:**
-   ```bash
-   npm run build
-   # or
-   bun run build
-   ```
-
-3. **Configure Gemini CLI:**
-
-   **Option A: Using gemini-extension.json (automatic detection)**
-   
-   Place the project in `~/.gemini/extensions/atlassian-mcp/` or create a symbolic link:
-   ```bash
-   ln -s $(pwd) ~/.gemini/extensions/atlassian-mcp
-   ```
-
-   **Option B: Manual configuration in settings.json**
-   
-   Edit `~/.gemini/settings.json`:
-   ```json
-   {
-     "mcpServers": {
-       "atlassian-jira": {
-         "command": "node",
-         "args": ["/absolute/path/to/atlassian-mcp/dist/index.js"],
-         "cwd": "/absolute/path/to/atlassian-mcp",
-         "env": {
-           "JIRA_HOST": "${JIRA_HOST}",
-           "JIRA_EMAIL": "${JIRA_EMAIL}",
-           "JIRA_API_TOKEN": "${JIRA_API_TOKEN}",
-           "JIRA_PROJECT_KEY": "${JIRA_PROJECT_KEY}",
-           "ISSUE_CONFIG_PATH": "${ISSUE_CONFIG_PATH}"
-         }
-       }
-     }
-   }
-   ```
+Ready-to-copy examples are available in:
+- `examples/mcp.json`
+- `examples/.env.example`
 
 ## Quick Start
 
@@ -150,7 +113,24 @@ After installation, configure your environment:
    /mcp tools atlassian-jira
    ```
 
-For detailed distribution options, see [DISTRIBUTION.md](./DISTRIBUTION.md).
+For detailed distribution options, CI publishing, and release flow, see [DISTRIBUTION.md](./DISTRIBUTION.md).
+
+## Troubleshooting
+
+- `npx` command not found:
+  - Install Node.js 24+ and confirm with `node -v` and `npx -v`.
+- MCP server not starting in Gemini/Cursor:
+  - Validate JSON syntax in your MCP config file.
+  - Confirm package resolution with `npx -y @esdantunes/atlassian-mcp@latest`.
+- Jira authentication errors (`401`/`403`):
+  - Re-check `JIRA_EMAIL` and `JIRA_API_TOKEN`.
+  - Ensure `JIRA_HOST` uses the full URL (`https://your-domain.atlassian.net`).
+- Project or issue defaults not applied:
+  - Confirm `JIRA_PROJECT_KEY` is set and valid.
+  - Confirm `ISSUE_CONFIG_PATH` points to an existing `issue-config.yml`.
+- Validate required variables quickly:
+  - `JIRA_HOST`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `JIRA_PROJECT_KEY` must be non-empty.
+  - `ISSUE_CONFIG_PATH` is optional, but recommended when you keep config outside the project root.
 
 ## Configuration
 

@@ -71,6 +71,7 @@ function processDescription(description: string | { type: "doc"; version: number
           return parsed;
         }
       } catch {
+        // If parsing fails, treat the input as plain text.
       }
     }
     return textToAdf(description);
