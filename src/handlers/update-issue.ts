@@ -6,6 +6,7 @@ import {
   type UpdateIssueBody,
   type JiraAdfDocument,
 } from "../lib/issue-fields.js";
+import { transitionIssueToStatus } from "../lib/jira-transitions.js";
 
 interface UpdateIssueArgs {
   id: string;
@@ -16,6 +17,8 @@ interface UpdateIssueArgs {
   labels?: string[];
   components?: string[];
   assignee?: string | null;
+  /** Target workflow status name (e.g. "In Progress"). Applied via Jira transition API (not edit fields). */
+  status?: string;
 }
 
 export async function handleUpdateIssue(
@@ -39,14 +42,17 @@ export async function handleUpdateIssue(
     };
 
     const fields = await buildUpdateIssueFields(body);
+    const hasFieldUpdates = Object.keys(fields).length > 0;
+    const statusArg = args.status?.trim();
+    const wantsStatus = Boolean(statusArg);
 
-    if (Object.keys(fields).length === 0) {
+    if (!hasFieldUpdates && !wantsStatus) {
       return {
         content: [
           {
             type: "text",
             text: JSON.stringify({
-              error: "At least one field must be provided for update",
+              error: "At least one field or status must be provided for update",
             }),
           },
         ],
@@ -54,10 +60,16 @@ export async function handleUpdateIssue(
       };
     }
 
-    await client.issues.editIssue({
-      issueIdOrKey: id,
-      fields: fields as Record<string, unknown>,
-    });
+    if (hasFieldUpdates) {
+      await client.issues.editIssue({
+        issueIdOrKey: id,
+        fields: fields as Record<string, unknown>,
+      });
+    }
+
+    if (statusArg) {
+      await transitionIssueToStatus(client, id, statusArg);
+    }
 
     return {
       content: [

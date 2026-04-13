@@ -6,6 +6,7 @@ import {
   type CreateIssueBody,
   type JiraAdfDocument,
 } from "../lib/issue-fields.js";
+import { transitionIssueToStatus } from "../lib/jira-transitions.js";
 
 interface CreateIssueArgs {
   title: string;
@@ -17,6 +18,8 @@ interface CreateIssueArgs {
   components?: string[];
   assignee?: string | null;
   reporter?: string;
+  /** Target workflow status name (e.g. "To Do", "In Progress"). Applied via transition after create. */
+  status?: string;
 }
 
 export async function handleCreateIssue(
@@ -52,19 +55,36 @@ export async function handleCreateIssue(
       },
     });
 
+    const issueKey = created.key ?? created.id;
+    const payload: Record<string, unknown> = {
+      id: created.id,
+      key: created.key,
+      self: created.self,
+    };
+
+    if (args.status?.trim() && issueKey) {
+      try {
+        const { alreadyThere } = await transitionIssueToStatus(
+          client,
+          String(issueKey),
+          args.status.trim()
+        );
+        payload.statusApplied = true;
+        payload.statusNote = alreadyThere
+          ? "Issue was already in the requested status."
+          : undefined;
+      } catch (statusError: unknown) {
+        payload.statusApplied = false;
+        payload.statusError =
+          statusError instanceof Error ? statusError.message : String(statusError);
+      }
+    }
+
     return {
       content: [
         {
           type: "text",
-          text: JSON.stringify(
-            {
-              id: created.id,
-              key: created.key,
-              self: created.self,
-            },
-            null,
-            2
-          ),
+          text: JSON.stringify(payload, null, 2),
         },
       ],
     };

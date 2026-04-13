@@ -76,7 +76,7 @@ export function registerTools(server: Server): void {
       {
         name: "create_issue",
         description:
-          "Create a new Jira issue. Description must be ADF (Atlassian Document Format). Uses default values from the configuration file when not specified.",
+          "Create a new Jira issue. Description must be ADF (Atlassian Document Format). Uses default values from the configuration file when not specified. Optional status sets workflow status after create via a transition (must match a destination status name available from the initial state).",
         inputSchema: {
           type: "object",
           properties: {
@@ -115,6 +115,11 @@ export function registerTools(server: Server): void {
             reporter: {
               type: "string",
               description: "Reporter account ID",
+            },
+            status: {
+              type: "string",
+              description:
+                "Workflow status name to move the issue to after creation (e.g. To Do, In Progress, Backlog). Uses Jira transitions; spelling should match the status in Jira. If no transition exists, the issue is still created and statusError is returned in the response.",
             },
           },
           required: ["title", "description"],
@@ -158,7 +163,7 @@ export function registerTools(server: Server): void {
       {
         name: "update_issue",
         description:
-          "Update an existing Jira issue. Only provided fields will be updated. When setting description, pass ADF (reuse descriptionAdf from get_issue when possible).",
+          "Update an existing Jira issue. Only provided fields will be updated. When setting description, pass ADF (reuse descriptionAdf from get_issue when possible). Status changes use workflow transitions (not the edit-fields API); provide the target status name as it appears in Jira.",
         inputSchema: {
           type: "object",
           properties: {
@@ -192,6 +197,11 @@ export function registerTools(server: Server): void {
             assignee: {
               type: "string",
               description: "New assignee account ID, or null to unassign",
+            },
+            status: {
+              type: "string",
+              description:
+                "Target workflow status name (e.g. In Progress, Done). Must be reachable via an allowed transition from the issue's current status.",
             },
           },
           required: ["id"],
@@ -233,6 +243,7 @@ export function registerTools(server: Server): void {
             components: z.array(z.string()).optional(),
             assignee: z.union([z.string(), z.null()]).optional(),
             reporter: z.string().optional(),
+            status: z.string().optional(),
           });
           const validated = schema.parse(args || {});
           return await handleCreateIssue(validated);
@@ -248,6 +259,7 @@ export function registerTools(server: Server): void {
             labels: z.array(z.string()).optional(),
             components: z.array(z.string()).optional(),
             assignee: z.union([z.string(), z.null()]).optional(),
+            status: z.string().optional(),
           });
           const validated = schema.parse(args || {});
           return await handleUpdateIssue(validated);
