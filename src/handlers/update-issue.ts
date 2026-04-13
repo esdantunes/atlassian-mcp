@@ -4,12 +4,13 @@ import {
 import {
   buildUpdateIssueFields,
   type UpdateIssueBody,
+  type JiraAdfDocument,
 } from "../lib/issue-fields.js";
 
 interface UpdateIssueArgs {
   id: string;
   title?: string;
-  description?: string | Record<string, unknown>;
+  description?: JiraAdfDocument;
   priority?: string;
   parent?: string;
   labels?: string[];

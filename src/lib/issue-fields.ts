@@ -2,9 +2,16 @@ import type { Version3Client } from "jira.js";
 import { JIRA_PROJECT_KEY } from "../config/jira.js";
 import { issueConfig } from "../config/issue-defaults.js";
 
+ export type JiraAdfDocument = {
+  type: "doc";
+  version: number;
+  content: unknown[];
+};
+
 export interface CreateIssueBody {
   title: string;
-  description?: string | { type: "doc"; version: number; content: unknown[] } | Record<string, unknown>;
+  description: JiraAdfDocument;
+  issue_type?: string;
   priority?: string;
   reporter?: string;
   assignee?: string | null;
@@ -16,7 +23,7 @@ export interface CreateIssueBody {
 
 export interface UpdateIssueBody {
   title?: string;
-  description?: string | { type: "doc"; version: number; content: unknown[] } | Record<string, unknown>;
+  description?: JiraAdfDocument;
   priority?: string;
   assignee?: string | null;
   parent?: string;
@@ -102,8 +109,8 @@ export async function buildCreateIssueFields(
     reporter: { accountId: body.reporter ?? currentUserAccountId },
   };
 
-  const issueType = resolveValue(undefined, defaults.issue_type);
-  if (issueType) fields.issuetype = { name: issueType };
+  const issueType = resolveValue(body.issue_type, defaults.issue_type);
+  if (issueType) fields.issuetype = { name: String(issueType) };
 
   const parentKey = resolveValue(body.parent, defaults.parent_key);
   if (parentKey) fields.parent = { key: parentKey };

@@ -10,6 +10,33 @@ import { handleCreateIssue } from "../handlers/create-issue.js";
 import { handleUpdateIssue } from "../handlers/update-issue.js";
 import { handleQueryIssues } from "../handlers/query-issues.js";
 
+const jiraAdfDocInputSchemaProperty = {
+  type: "object" as const,
+  description:
+    "Atlassian Document Format (ADF) root document: { type: 'doc', version: 1, content: [...] }. For updates, reuse descriptionAdf from get_issue to preserve formatting. https://developer.atlassian.com/cloud/jira/platform/apis/document/structure/",
+  additionalProperties: true,
+  properties: {
+    type: { type: "string" as const, const: "doc" as const },
+    version: { type: "number" as const },
+    content: {
+      type: "array" as const,
+      items: {
+        type: "object" as const,
+        additionalProperties: true,
+      },
+    },
+  },
+  required: ["type", "version", "content"] as const,
+};
+
+const jiraAdfDocumentSchema = z
+  .object({
+    type: z.literal("doc"),
+    version: z.number(),
+    content: z.array(z.record(z.string(), z.unknown())),
+  })
+  .passthrough();
+
 export function registerTools(server: Server): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
@@ -48,7 +75,8 @@ export function registerTools(server: Server): void {
       },
       {
         name: "create_issue",
-        description: "Create a new Jira issue. Uses default values from the configuration file when not specified.",
+        description:
+          "Create a new Jira issue. Description must be ADF (Atlassian Document Format). Uses default values from the configuration file when not specified.",
         inputSchema: {
           type: "object",
           properties: {
@@ -56,39 +84,12 @@ export function registerTools(server: Server): void {
               type: "string",
               description: "Issue title (required)",
             },
-            description: {
-              oneOf: [
-                {
-                  type: "string",
-                  description: "Plain text description (automatically converted to basic ADF format)",
-                  examples: ["Simple text description"],
-                },
-                {
-                  type: "object",
-                  description: "ADF (Atlassian Document Format) object for rich text formatting",
-                  properties: {
-                    type: { type: "string", const: "doc" },
-                    version: { type: "number" },
-                    content: { type: "array" },
-                  },
-                  required: ["type", "version", "content"],
-                  examples: [
-                    {
-                      type: "doc",
-                      version: 1,
-                      content: [
-                        {
-                          type: "paragraph",
-                          content: [{ type: "text", text: "Issue description" }],
-                        },
-                      ],
-                    },
-                  ],
-                },
-              ],
+            issue_type: {
+              type: "string",
               description:
-                "Issue description. Use plain text string for simple descriptions, or ADF object for rich text formatting (headings, bold, italic, lists, tables, code blocks, etc.). When updating an issue with existing ADF formatting, prefer passing the ADF object directly (from descriptionAdf field) to preserve formatting. See https://developer.atlassian.com/cloud/jira/platform/apis/document/structure for ADF specification.",
+                "Jira issue type name (e.g. Story, Task, Bug). Required when issue-config.yml has no defaults.issue_type.",
             },
+            description: jiraAdfDocInputSchemaProperty,
             priority: {
               type: "string",
               description: "Issue priority (e.g., High, Medium, Low)",
@@ -116,7 +117,7 @@ export function registerTools(server: Server): void {
               description: "Reporter account ID",
             },
           },
-          required: ["title"],
+          required: ["title", "description"],
         },
       },
       {
@@ -156,7 +157,8 @@ export function registerTools(server: Server): void {
       },
       {
         name: "update_issue",
-        description: "Update an existing Jira issue. Only provided fields will be updated (partial update).",
+        description:
+          "Update an existing Jira issue. Only provided fields will be updated. When setting description, pass ADF (reuse descriptionAdf from get_issue when possible).",
         inputSchema: {
           type: "object",
           properties: {
@@ -168,39 +170,7 @@ export function registerTools(server: Server): void {
               type: "string",
               description: "New issue title",
             },
-            description: {
-              oneOf: [
-                {
-                  type: "string",
-                  description: "Plain text description (automatically converted to basic ADF format)",
-                  examples: ["Simple text description"],
-                },
-                {
-                  type: "object",
-                  description: "ADF (Atlassian Document Format) object for rich text formatting",
-                  properties: {
-                    type: { type: "string", const: "doc" },
-                    version: { type: "number" },
-                    content: { type: "array" },
-                  },
-                  required: ["type", "version", "content"],
-                  examples: [
-                    {
-                      type: "doc",
-                      version: 1,
-                      content: [
-                        {
-                          type: "paragraph",
-                          content: [{ type: "text", text: "Issue description" }],
-                        },
-                      ],
-                    },
-                  ],
-                },
-              ],
-              description:
-                "New issue description. Use plain text string for simple descriptions, or ADF object for rich text formatting (headings, bold, italic, lists, tables, code blocks, etc.). IMPORTANT: When updating an issue that already has ADF formatting, always pass the ADF object (from descriptionAdf field) to preserve existing formatting. Passing plain text will replace all formatting. See https://developer.atlassian.com/cloud/jira/platform/apis/document/structure for ADF specification.",
-            },
+            description: jiraAdfDocInputSchemaProperty,
             priority: {
               type: "string",
               description: "New issue priority",
@@ -255,7 +225,8 @@ export function registerTools(server: Server): void {
         case "create_issue": {
           const schema = z.object({
             title: z.string().min(1),
-            description: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
+            description: jiraAdfDocumentSchema,
+            issue_type: z.string().optional(),
             priority: z.string().optional(),
             parent: z.string().optional(),
             labels: z.array(z.string()).optional(),
@@ -271,7 +242,7 @@ export function registerTools(server: Server): void {
           const schema = z.object({
             id: z.string().min(1),
             title: z.string().optional(),
-            description: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
+            description: jiraAdfDocumentSchema.optional(),
             priority: z.string().optional(),
             parent: z.string().optional(),
             labels: z.array(z.string()).optional(),

@@ -4,11 +4,13 @@ import {
 import {
   buildCreateIssueFields,
   type CreateIssueBody,
+  type JiraAdfDocument,
 } from "../lib/issue-fields.js";
 
 interface CreateIssueArgs {
   title: string;
-  description?: string | Record<string, unknown>;
+  description: JiraAdfDocument;
+  issue_type?: string;
   priority?: string;
   parent?: string;
   labels?: string[];
@@ -31,6 +33,7 @@ export async function handleCreateIssue(
     const body: CreateIssueBody = {
       title: args.title,
       description: args.description,
+      issue_type: args.issue_type,
       priority: args.priority,
       parent: args.parent,
       labels: args.labels,
