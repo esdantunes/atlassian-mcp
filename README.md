@@ -1,49 +1,41 @@
 # Atlassian MCP Server
 
-MCP (Model Context Protocol) server for interacting with Jira Cloud, designed to simplify issue creation and querying by using human-readable field names instead of Jira IDs, with configurable defaults to minimize required input.
+I built this MCP because I needed a free-ish way to manage Jira issues without giving an AI the keys to the whole company kingdom.
+So yes, the scope is intentionally reduced to my area and my projects. That is the point.
+You can do the same for other teams: keep each MCP narrow, keep blast radius small, sleep better.
+Also: this was my first MCP project, so part painkiller, part learning-by-fire.
 
-## Purpose
+## Why this exists
 
-This project provides an MCP server that enables AI assistants (like Gemini CLI) to interact with Jira Cloud through a simplified interface that:
-- Uses human-readable field names instead of Jira custom field IDs
-- Supports configurable default values to minimize API payloads
-- Works with any Jira project through configuration files
-- Provides clean, simplified responses
+- Interact with Jira Cloud through MCP using practical tool inputs
+- Keep automation scoped to specific projects and defaults
+- Avoid broad, risky org-wide actions by design
 
 ## Prerequisites
 
-- **Node.js**: >= 24.0.0
-- **Jira Cloud** account with API token
-- **Gemini CLI** (or another MCP-compatible client)
+- Node.js `>=24`
+- Jira Cloud account + API token
+- MCP client such as Gemini CLI or Cursor
 
 ## Installation
 
-### Option 1: Run via npx (Recommended)
+Use npm package distribution only (the GitHub repo is private).
 
-Use this package directly from npm without local installation:
+### Option 1: Run with npx (recommended)
 
 ```bash
 npx -y @esdantunes/atlassian-mcp@latest
 ```
 
-### Option 2: Install globally
+### Option 2: Global install
 
 ```bash
 npm install -g @esdantunes/atlassian-mcp
 ```
 
-### Option 3: Local development
-
-```bash
-git clone https://github.com/esdantunes/atlassian-mcp.git
-cd atlassian-mcp
-npm install
-npm run build
-```
-
 ## Quick Setup (Gemini CLI + Cursor)
 
-Use the same MCP server block for both clients:
+Use the same MCP block in both clients:
 
 ```json
 {
@@ -63,497 +55,39 @@ Use the same MCP server block for both clients:
 }
 ```
 
-Where to put it:
-- **Gemini CLI:** `~/.gemini/settings.json` under `mcpServers`
-- **Cursor:** `.cursor/mcp.json` in your workspace (or your global Cursor MCP config)
+- Gemini CLI: `~/.gemini/settings.json`
+- Cursor: `.cursor/mcp.json`
+- Copy-ready example: `examples/mcp.json`
 
-Ready-to-copy examples are available in:
-- `examples/mcp.json`
-- `examples/.env.example`
+## Environment variables
 
-## Quick Start
+Required:
 
-After installation, configure your environment:
+- `JIRA_HOST` (example: `https://company.atlassian.net`)
+- `JIRA_EMAIL`
+- `JIRA_API_TOKEN`
+- `JIRA_PROJECT_KEY`
 
-1. **Configure environment variables:**
+Optional:
 
-   Create a `.env` file or set environment variables:
-   ```env
-   JIRA_HOST=https://your-domain.atlassian.net
-   JIRA_EMAIL=your-email@example.com
-   JIRA_API_TOKEN=your-api-token-here
-   JIRA_PROJECT_KEY=YOUR_PROJECT_KEY
-   ```
+- `ISSUE_CONFIG_PATH` (defaults to `issue-config.yml` in current working directory)
 
-   **Get your Jira API token:** [Create one here](https://id.atlassian.com/manage-profile/security/api-tokens)
+## Issue defaults config
 
-2. **Configure issue defaults and custom fields:**
-
-   Copy the example config:
-   ```bash
-   cp issue-config.example.yml issue-config.yml
-   ```
-   
-   Edit `issue-config.yml` with your project-specific defaults and custom field mappings.
-
-3. **Set the config path (if not using default):**
-
-   If your `issue-config.yml` is not in the project root, set:
-   ```bash
-   export ISSUE_CONFIG_PATH=/path/to/issue-config.yml
-   ```
-
-4. **Test the installation:**
-
-   ```bash
-   # List available MCP tools
-   gemini mcp list
-
-   # Or in Gemini CLI chat
-   /mcp tools atlassian-jira
-   ```
-
-For detailed distribution options, CI publishing, and release flow, see [DISTRIBUTION.md](./DISTRIBUTION.md).
-
-## Troubleshooting
-
-- `npx` command not found:
-  - Install Node.js 24+ and confirm with `node -v` and `npx -v`.
-- MCP server not starting in Gemini/Cursor:
-  - Validate JSON syntax in your MCP config file.
-  - Confirm package resolution with `npx -y @esdantunes/atlassian-mcp@latest`.
-- Jira authentication errors (`401`/`403`):
-  - Re-check `JIRA_EMAIL` and `JIRA_API_TOKEN`.
-  - Ensure `JIRA_HOST` uses the full URL (`https://your-domain.atlassian.net`).
-- Project or issue defaults not applied:
-  - Confirm `JIRA_PROJECT_KEY` is set and valid.
-  - Confirm `ISSUE_CONFIG_PATH` points to an existing `issue-config.yml`.
-- Validate required variables quickly:
-  - `JIRA_HOST`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `JIRA_PROJECT_KEY` must be non-empty.
-  - `ISSUE_CONFIG_PATH` is optional, but recommended when you keep config outside the project root.
-
-## Configuration
-
-### `.env` File
-
-Required environment variables:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `JIRA_HOST` | Your Jira Cloud instance URL | `https://company.atlassian.net` |
-| `JIRA_EMAIL` | Your Jira account email | `user@example.com` |
-| `JIRA_API_TOKEN` | Jira API token ([create one](https://id.atlassian.com/manage-profile/security/api-tokens)) | `ATATT3xFfGF0...` |
-| `JIRA_PROJECT_KEY` | Default Jira project key | `PROJ` |
-| `ISSUE_CONFIG_PATH` | Path to issue config file (optional, default: `issue-config.yml`) | `issue-config.yml` |
-
-### `issue-config.yml` File
-
-Configure default values and custom field mappings for your Jira project:
-
-```yaml
-defaults:
-  parent_key: "PROJ-1"
-  issue_type: "Task"
-  priority: "Low"
-  labels:
-    - label1
-    - label2
-  components:
-    - component-name
-
-custom_fields:
-  my-custom-field:
-    field_id: customfield_12345
-    format: single              # "single" or "array"
-    default_value: "Option A"
-    default_option_id: "10001"
-    options:
-      "Option A": "10001"
-      "Option B": "10002"
-```
-
-**Notes:**
-- Omit any `defaults` key to not send that field unless provided in the request
-- Query tools use `JIRA_PROJECT_KEY` (from MCP/env) as the default project source
-- Custom fields map human-readable names to Jira field IDs and option IDs
-- See `issue-config.example.yml` for detailed documentation
-
-## Description Field Formats
-
-The `description` field in `create_issue` and `update_issue` accepts **two distinct formats**:
-
-### 1. Plain Text String
-
-**When to use:** For simple, unformatted text descriptions.
-
-**Format:** A simple string value.
-
-**Example:**
-```json
-{
-  "title": "New issue",
-  "description": "This is a simple text description"
-}
-```
-
-**Behavior:** The MCP server automatically converts plain text strings to basic ADF format (single paragraph).
-
-### 2. ADF (Atlassian Document Format) Object
-
-**When to use:** 
-- When you need rich text formatting (headings, bold, italic, lists, tables, code blocks, links, etc.)
-- **CRITICAL for updates:** When updating an issue that already has formatted content, you MUST pass the ADF object from the `descriptionAdf` field to preserve existing formatting. Passing plain text will replace all formatting.
-
-**Format:** A JSON object with the ADF structure.
-
-**Required structure:**
-```json
-{
-  "type": "doc",
-  "version": 1,
-  "content": [
-    // Array of ADF nodes (paragraphs, headings, lists, etc.)
-  ]
-}
-```
-
-**Example with formatting:**
-```json
-{
-  "title": "New issue",
-  "description": {
-    "type": "doc",
-    "version": 1,
-    "content": [
-      {
-        "type": "heading",
-        "attrs": { "level": 1 },
-        "content": [
-          { "type": "text", "text": "Main Heading" }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "content": [
-          { "type": "text", "text": "Text with " },
-          { 
-            "type": "text", 
-            "text": "bold", 
-            "marks": [{ "type": "strong" }] 
-          },
-          { "type": "text", "text": " and " },
-          { 
-            "type": "text", 
-            "text": "italic", 
-            "marks": [{ "type": "em" }] 
-          }
-        ]
-      },
-      {
-        "type": "bulletList",
-        "content": [
-          {
-            "type": "listItem",
-            "content": [
-              {
-                "type": "paragraph",
-                "content": [{ "type": "text", "text": "First item" }]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-**Important Notes:**
-- ADF supports: headings (levels 1-6), bold (`strong`), italic (`em`), code (`code`), links, bullet lists, ordered lists, tables, code blocks, blockquotes, and more
-- When reading issues via `get_issue` or `list_issues`, check the `descriptionAdf` field to get the full ADF structure with formatting preserved
-- **For updates:** Always use the `descriptionAdf` object from the existing issue when updating to preserve formatting. Converting `descriptionAdf` to plain text and back will lose all formatting.
-- See [Atlassian Document Format documentation](https://developer.atlassian.com/cloud/jira/platform/apis/document/structure) for the complete ADF specification
-
-## MCP Tools
-
-The server exposes the following MCP tools:
-
-### `list_issues`
-
-List issues with pagination support.
-
-**Parameters:**
-- `maxResults` (optional): Number of issues per page (default: 50, max: 5000)
-- `nextPageToken` (optional): Token from previous response for pagination
-
-**Example usage with Gemini CLI:**
-```
-/mcp call atlassian-jira list_issues {"maxResults": 10}
-```
-
-**Response:**
-```json
-{
-  "issues": [
-    {
-      "id": "PROJ-1",
-      "title": "Issue title",
-      "description": "Issue description",
-      "descriptionAdf": {
-        "version": 1,
-        "type": "doc",
-        "content": [
-          {
-            "type": "paragraph",
-            "content": [
-              { "type": "text", "text": "Issue description" }
-            ]
-          }
-        ]
-      },
-      "status": "To Do",
-      "priority": "Medium",
-      "reporter": {
-        "id": "account-id",
-        "displayName": "John Doe",
-        "emailAddress": "john@example.com"
-      },
-      "assignee": null
-    }
-  ],
-  "nextPageToken": "token-for-next-page"
-}
-```
-
-**Note:** The `description` field always contains plain text for backward compatibility. The `descriptionAdf` field (optional) contains the full ADF (Atlassian Document Format) structure with all formatting preserved when available. Use `descriptionAdf` when you need to preserve or work with rich text formatting.
-
-### `get_issue`
-
-Get a specific issue by ID or key.
-
-**Parameters:**
-- `id` (required): Issue ID or key (e.g., `PROJ-123`)
-
-**Example usage with Gemini CLI:**
-```
-/mcp call atlassian-jira get_issue {"id": "PROJ-1"}
-```
-
-**Response:**
-```json
-{
-  "id": "PROJ-1",
-  "title": "Issue title",
-  "description": "Issue description",
-  "descriptionAdf": {
-    "version": 1,
-    "type": "doc",
-    "content": [
-      {
-        "type": "paragraph",
-        "content": [
-          { "type": "text", "text": "Issue description" }
-        ]
-      }
-    ]
-  },
-  "status": "In Progress",
-  "priority": "High",
-  "reporter": { ... },
-  "assignee": { ... }
-}
-```
-
-**Note:** The `description` field always contains plain text for backward compatibility. The `descriptionAdf` field (optional) contains the full ADF (Atlassian Document Format) structure with all formatting preserved when available. Use `descriptionAdf` when you need to preserve or work with rich text formatting.
-
-### `query_issues`
-
-Run Jira queries using raw JQL with optional fields and pagination.
-
-**Parameters:**
-- `jql` (required): Raw JQL query to execute
-- `fields` (optional): Jira fields to return (defaults to `summary`, `description`, `status`, `priority`, `reporter`, `assignee`)
-- `maxResults` (optional): Number of issues per page (default: 50, max: 5000)
-- `nextPageToken` (optional): Token from previous response for pagination
-- `project` (optional): Project override used only when JQL does not include a project clause
-
-**Project default precedence:**
-- If JQL already includes a project clause (`project = ...` or `project in (...)`), it is used exactly as provided
-- If JQL has no project clause, `JIRA_PROJECT_KEY` from MCP/env is injected automatically
-- If `project` is provided in the MCP request and JQL has no project clause, that override is used instead of `JIRA_PROJECT_KEY`
-- `issue-config.yml` is not used as a default project source for query operations
-
-**Example usage with Gemini CLI:**
-```
-/mcp call atlassian-jira query_issues {"jql":"issue in portfolioChildIssuesOf(\"JIRA-864\") AND labels IN (architecture, devops) ORDER BY priority DESC, created, parent, key DESC","maxResults":20}
-```
-
-### `create_issue`
-
-Create a new issue.
-
-**Parameters:**
-- `title` (required): Issue title
-- `description` (optional): Description as plain text string or ADF object
-- `priority` (optional): Priority name (e.g., "High", "Medium", "Low")
-- `parent` (optional): Parent issue key (e.g., "PROJ-1")
-- `labels` (optional): Array of label strings
-- `components` (optional): Array of component names
-- `assignee` (optional): Account ID of assignee, or `null` to unassign
-- `reporter` (optional): Account ID of reporter
-- Any custom field names from `issue-config.yml`
-
-**Description Field:**
-
-The `description` parameter accepts two formats: **plain text string** or **ADF object**. See the [Description Field Formats](#description-field-formats) section above for detailed information and examples.
-
-**Quick reference:**
-- Use plain text string for simple, unformatted descriptions
-- Use ADF object for rich text formatting (headings, bold, italic, lists, tables, code blocks, etc.)
-
-**Example usage with Gemini CLI:**
-```
-/mcp call atlassian-jira create_issue {"title": "New issue", "description": "Issue description", "priority": "High"}
-```
-
-**Response:**
-```json
-{
-  "id": "2599962",
-  "key": "PROJ-123",
-  "self": "https://domain.atlassian.net/rest/api/3/issue/2599962"
-}
-```
-
-**Behavior:**
-- Fields provided override defaults
-- Fields not provided use defaults from `issue-config.yml` (if configured)
-- Fields without defaults are omitted from the Jira API request
-
-### `update_issue`
-
-Update an existing issue. Only provided fields will be updated (partial update).
-
-**Parameters:**
-- `id` (required): Issue ID or key (e.g., `PROJ-123`)
-- `title` (optional): New title
-- `description` (optional): New description (string or ADF object)
-- `priority` (optional): New priority
-- `parent` (optional): New parent issue key
-- `labels` (optional): New array of labels
-- `components` (optional): New array of components
-- `assignee` (optional): New assignee account ID, or `null` to unassign
-- Any custom field names from `issue-config.yml`
-
-**Description Field - IMPORTANT for Updates:**
-
-The `description` parameter accepts two formats: **plain text string** or **ADF object**. See the [Description Field Formats](#description-field-formats) section above for detailed information and examples.
-
-**⚠️ CRITICAL for preserving formatting:** When updating an issue that already has formatted content (from `descriptionAdf` field), you **MUST** pass the ADF object directly to preserve existing formatting. Passing plain text will **replace all formatting** with unformatted text.
-
-**Example preserving formatting:**
-```json
-{
-  "id": "PROJ-123",
-  "description": {
-    "type": "doc",
-    "version": 1,
-    "content": [
-      // Use the descriptionAdf object from get_issue/list_issues
-      // Modify content as needed, but keep the ADF structure
-    ]
-  }
-}
-```
-
-**Example usage with Gemini CLI:**
-```
-/mcp call atlassian-jira update_issue {"id": "PROJ-123", "title": "Updated title", "priority": "High"}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Issue updated successfully"
-}
-```
-
-**Behavior:**
-- Only fields provided in the request are updated
-- Fields not provided remain unchanged
-- At least one field must be provided
-- Custom fields work the same way as in `create_issue`
-
-## Development
+Use `issue-config.example.yml` as your template:
 
 ```bash
-bun run dev      # Start development server with hot reload (tsx watch)
-bun run build    # Build for production
-bun run start    # Run production build
-bun run lint     # Run ESLint
+cp issue-config.example.yml issue-config.yml
 ```
 
-## Testing with Gemini CLI
+This file lets you define defaults and custom field mappings for your project.
 
-After configuring the MCP server, you can test it:
+## Tool behavior details
 
-1. **List available tools:**
-   ```
-   /mcp list
-   ```
+This README is intentionally short.
+Detailed behavior, tool inputs, and schema-level contract live in:
 
-2. **List tools from this server:**
-   ```
-   /mcp tools atlassian-jira
-   ```
-
-3. **Call a tool:**
-   ```
-   /mcp call atlassian-jira list_issues {"maxResults": 5}
-   ```
-
-## Project Structure
-
-```
-.
-├── src/
-│   ├── mcp/
-│   │   ├── server.ts          # MCP server initialization
-│   │   └── tools.ts            # Tool registration and routing
-│   ├── handlers/
-│   │   ├── list-issues.ts     # Handler for list_issues tool
-│   │   ├── get-issue.ts       # Handler for get_issue tool
-│   │   ├── create-issue.ts    # Handler for create_issue tool
-│   │   └── update-issue.ts    # Handler for update_issue tool
-│   ├── config/                # Configuration loaders (Jira, issue defaults)
-│   ├── lib/                   # Jira client and issue field builders
-│   ├── types/                 # TypeScript type definitions
-│   └── index.ts               # Entry point
-├── .env                       # Environment variables (gitignored)
-├── .env.example               # Environment variables template
-├── issue-config.yml           # Issue defaults and custom field mappings (gitignored)
-├── issue-config.example.yml   # Issue configuration template
-├── tsconfig.json              # TypeScript configuration
-├── eslint.config.js           # ESLint configuration
-└── package.json               # Project dependencies and scripts
-```
-
-## Security Notes
-
-### Known Vulnerabilities
-
-The project may show a moderate vulnerability in `ajv` (< 8.18.0) when running `bun audit`. This vulnerability affects:
-
-- **ESLint** (development dependency only)
-- **@modelcontextprotocol/sdk** (transitive dependency)
-
-**Impact:** This is a moderate severity ReDoS (Regular Expression Denial of Service) vulnerability that only affects the `$data` option in ajv. Since:
-1. This is a development-time dependency (ESLint)
-2. The vulnerability requires specific usage patterns (`$data` option) that are not used in this project's runtime code
-3. ESLint 10.0.0 does not yet support ajv 8.x (required for the fix)
-
-**Status:** This vulnerability does not affect the production runtime of the MCP server. The ESLint maintainers are aware of this issue and will address it in a future release.
+- `src/mcp/tools.ts`
 
 ## License
 
