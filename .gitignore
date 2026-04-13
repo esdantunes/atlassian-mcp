@@ -30,3 +30,10 @@ coverage/
 .gitnexus/
 
 .venv*
+
+# AI files
+.cursor/
+.claude/
+.claude*
+AGENTS.md
+CLAUDE.md
