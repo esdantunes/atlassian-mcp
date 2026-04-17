@@ -17,6 +17,8 @@ interface UpdateIssueArgs {
   labels?: string[];
   components?: string[];
   assignee?: string | null;
+  /** Replace fix versions when set; `[]` clears them. Omit to leave unchanged. */
+  fix_versions?: string[];
   /** Target workflow status name (e.g. "In Progress"). Applied via Jira transition API (not edit fields). */
   status?: string;
 }
@@ -39,14 +41,16 @@ export async function handleUpdateIssue(
       labels: updateFields.labels,
       components: updateFields.components,
       assignee: updateFields.assignee,
+      fix_versions: updateFields.fix_versions,
     };
 
-    const fields = await buildUpdateIssueFields(body);
+    const { fields, fixVersionsMeta } = await buildUpdateIssueFields(client, body);
     const hasFieldUpdates = Object.keys(fields).length > 0;
+    const fixVersionsTouched = args.fix_versions !== undefined;
     const statusArg = args.status?.trim();
     const wantsStatus = Boolean(statusArg);
 
-    if (!hasFieldUpdates && !wantsStatus) {
+    if (!hasFieldUpdates && !fixVersionsTouched && !wantsStatus) {
       return {
         content: [
           {
@@ -71,18 +75,21 @@ export async function handleUpdateIssue(
       await transitionIssueToStatus(client, id, statusArg);
     }
 
+    const response: Record<string, unknown> = {
+      success: true,
+      message: "Issue updated successfully",
+    };
+    if (fixVersionsMeta !== undefined) {
+      response.fixVersionsApplied = fixVersionsMeta.applied;
+      response.fixVersionsSkipped = fixVersionsMeta.skipped;
+      if (fixVersionsMeta.note) response.fixVersionsNote = fixVersionsMeta.note;
+    }
+
     return {
       content: [
         {
           type: "text",
-          text: JSON.stringify(
-            {
-              success: true,
-              message: "Issue updated successfully",
-            },
-            null,
-            2
-          ),
+          text: JSON.stringify(response, null, 2),
         },
       ],
     };

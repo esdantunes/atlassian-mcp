@@ -1,5 +1,5 @@
 import { Version3Client, type Version3 } from "jira.js";
-import type { SimplifiedIssue, UserDetails } from "../types/issue.js";
+import type { IssueFixVersion, SimplifiedIssue, UserDetails } from "../types/issue.js";
 
 export const DEFAULT_MAX_RESULTS = 50;
 export const MAX_RESULTS_LIMIT = 5000;
@@ -58,10 +58,26 @@ function toUserDetails(user: { accountId?: string; displayName?: string; emailAd
   };
 }
 
+function mapFixVersions(raw: Version3.Version3Models.Fields["fixVersions"]): IssueFixVersion[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const out: IssueFixVersion[] = [];
+  for (const v of raw) {
+    if (!v?.id || !v?.name) continue;
+    out.push({
+      id: v.id,
+      name: v.name,
+      selectableGroupKey: v.released === true ? "RELEASED" : "UNRELEASED",
+      releaseDate: v.releaseDate,
+      archived: v.archived === true,
+    });
+  }
+  return out.length ? out : undefined;
+}
+
 export function toSimplifiedIssue(issue: Version3.Version3Models.Issue): SimplifiedIssue {
   const fields = (issue.fields ?? {}) as Version3.Version3Models.Fields;
   const descriptionAdf = extractAdfDescription(fields.description);
-  
+
   const result: SimplifiedIssue = {
     id: issue.key ?? issue.id,
     title: fields.summary ?? "",
@@ -71,10 +87,13 @@ export function toSimplifiedIssue(issue: Version3.Version3Models.Issue): Simplif
     reporter: toUserDetails(fields.reporter ?? null),
     assignee: toUserDetails(fields.assignee ?? null),
   };
-  
+
   if (descriptionAdf) {
     result.descriptionAdf = descriptionAdf;
   }
-  
+
+  const fv = mapFixVersions(fields.fixVersions);
+  if (fv) result.fixVersions = fv;
+
   return result;
 }

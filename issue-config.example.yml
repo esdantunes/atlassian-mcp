@@ -12,6 +12,10 @@ defaults:
   #   - label2
   # components:
   #   - component-name
+  # Fix versions (Jira field fixVersions): optional default(s) when create_issue omits fix_versions.
+  # Use list_project_versions for id, name, or selectableLabel. Never creates new releases.
+  # fix_versions:
+  #   - "My Release"
 
 # Custom fields specific to your Jira project.
 # Each entry maps a human-readable name to its Jira custom field configuration.

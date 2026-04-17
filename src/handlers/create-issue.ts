@@ -18,7 +18,7 @@ interface CreateIssueArgs {
   components?: string[];
   assignee?: string | null;
   reporter?: string;
-  /** Target workflow status name (e.g. "To Do", "In Progress"). Applied via transition after create. */
+  fix_versions?: string[];
   status?: string;
 }
 
@@ -43,9 +43,10 @@ export async function handleCreateIssue(
       components: args.components,
       assignee: args.assignee,
       reporter: args.reporter,
+      fix_versions: args.fix_versions,
     };
 
-    const fields = await buildCreateIssueFields(client, body, accountId);
+    const { fields, fixVersionsMeta } = await buildCreateIssueFields(client, body, accountId);
     const created = await client.issues.createIssue({
       fields: fields as {
         summary: string;
@@ -61,6 +62,12 @@ export async function handleCreateIssue(
       key: created.key,
       self: created.self,
     };
+
+    if (fixVersionsMeta !== undefined) {
+      payload.fixVersionsApplied = fixVersionsMeta.applied;
+      payload.fixVersionsSkipped = fixVersionsMeta.skipped;
+      if (fixVersionsMeta.note) payload.fixVersionsNote = fixVersionsMeta.note;
+    }
 
     if (args.status?.trim() && issueKey) {
       try {

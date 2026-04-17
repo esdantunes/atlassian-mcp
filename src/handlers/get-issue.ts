@@ -14,7 +14,7 @@ export async function handleGetIssue(
 
     const issue = await client.issues.getIssue({
       issueIdOrKey,
-      fields: ["summary", "description", "status", "priority", "reporter", "assignee"],
+      fields: ["summary", "description", "status", "priority", "reporter", "assignee", "fixVersions"],
     });
 
     return {

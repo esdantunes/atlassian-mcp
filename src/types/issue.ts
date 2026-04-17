@@ -4,6 +4,16 @@ export interface UserDetails {
   emailAddress?: string;
 }
 
+export type IssueFixVersionGroup = "RELEASED" | "UNRELEASED";
+
+export interface IssueFixVersion {
+  id: string;
+  name: string;
+  selectableGroupKey: IssueFixVersionGroup;
+  releaseDate?: string;
+  archived?: boolean;
+}
+
 export interface SimplifiedIssue {
   id: string;
   title: string;
@@ -13,6 +23,7 @@ export interface SimplifiedIssue {
   priority: string;
   reporter: UserDetails | null;
   assignee: UserDetails | null;
+  fixVersions?: IssueFixVersion[];
 }
 
 export interface IssueCreateInput {

@@ -1,8 +1,22 @@
 import type { Version3Client } from "jira.js";
 import { JIRA_PROJECT_KEY } from "../config/jira.js";
 import { issueConfig } from "../config/issue-defaults.js";
+import {
+  fetchProjectVersions,
+  fixVersionsResolutionNote,
+  normalizeDefaultFixVersions,
+  resolveFixVersionStrings,
+  type FixVersionsResolutionResult,
+} from "./jira-versions.js";
 
- export type JiraAdfDocument = {
+export type FixVersionsMeta = FixVersionsResolutionResult & { note?: string };
+
+export interface BuildIssueFieldsResult {
+  fields: Record<string, unknown>;
+  fixVersionsMeta?: FixVersionsMeta;
+}
+
+export type JiraAdfDocument = {
   type: "doc";
   version: number;
   content: unknown[];
@@ -18,6 +32,8 @@ export interface CreateIssueBody {
   parent?: string;
   labels?: string[];
   components?: string[];
+  /** Explicit `[]` skips defaults and leaves fix versions unset. */
+  fix_versions?: string[];
   [customField: string]: unknown;
 }
 
@@ -29,6 +45,8 @@ export interface UpdateIssueBody {
   parent?: string;
   labels?: string[];
   components?: string | string[];
+  /** Omit to leave unchanged; `[]` clears all fix versions. */
+  fix_versions?: string[];
   [customField: string]: unknown;
 }
 
@@ -98,10 +116,10 @@ function resolveValue<T>(bodyValue: T | undefined, defaultValue: unknown): T | u
 }
 
 export async function buildCreateIssueFields(
-  _client: Version3Client,
+  client: Version3Client,
   body: CreateIssueBody,
   currentUserAccountId: string
-): Promise<Record<string, unknown>> {
+): Promise<BuildIssueFieldsResult> {
   const { defaults, custom_fields } = issueConfig;
   const fields: Record<string, unknown> = {
     project: { key: JIRA_PROJECT_KEY },
@@ -158,12 +176,39 @@ export async function buildCreateIssueFields(
     fields[config.field_id] = config.format === "array" ? [option] : option;
   }
 
-  return fields;
+  let fixVersionsMeta: FixVersionsMeta | undefined;
+  const defaultsFv = normalizeDefaultFixVersions(defaults.fix_versions);
+  let toResolve: string[] | undefined;
+
+  if (body.fix_versions !== undefined) {
+    if (body.fix_versions.length === 0) {
+      toResolve = undefined;
+    } else {
+      toResolve = body.fix_versions;
+    }
+  } else if (defaultsFv !== undefined && defaultsFv.length > 0) {
+    toResolve = defaultsFv;
+  }
+
+  if (toResolve !== undefined && toResolve.length > 0) {
+    const versions = await fetchProjectVersions(client, JIRA_PROJECT_KEY);
+    const result = resolveFixVersionStrings(versions, toResolve);
+    if (result.fixVersionFieldValue.length > 0) {
+      fields.fixVersions = result.fixVersionFieldValue;
+    }
+    fixVersionsMeta = {
+      ...result,
+      note: fixVersionsResolutionNote(result),
+    };
+  }
+
+  return { fields, fixVersionsMeta };
 }
 
 export async function buildUpdateIssueFields(
+  client: Version3Client,
   body: UpdateIssueBody
-): Promise<Record<string, unknown>> {
+): Promise<BuildIssueFieldsResult> {
   const { custom_fields } = issueConfig;
   const fields: Record<string, unknown> = {};
 
@@ -219,5 +264,27 @@ export async function buildUpdateIssueFields(
     fields[config.field_id] = config.format === "array" ? [option] : option;
   }
 
-  return fields;
+  let fixVersionsMeta: FixVersionsMeta | undefined;
+  if (body.fix_versions !== undefined) {
+    if (body.fix_versions.length === 0) {
+      fields.fixVersions = [];
+      fixVersionsMeta = {
+        applied: [],
+        skipped: [],
+        fixVersionFieldValue: [],
+      };
+    } else {
+      const versions = await fetchProjectVersions(client, JIRA_PROJECT_KEY);
+      const result = resolveFixVersionStrings(versions, body.fix_versions);
+      if (result.fixVersionFieldValue.length > 0) {
+        fields.fixVersions = result.fixVersionFieldValue;
+      }
+      fixVersionsMeta = {
+        ...result,
+        note: fixVersionsResolutionNote(result),
+      };
+    }
+  }
+
+  return { fields, fixVersionsMeta };
 }

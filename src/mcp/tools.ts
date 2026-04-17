@@ -9,6 +9,7 @@ import { handleGetIssue } from "../handlers/get-issue.js";
 import { handleCreateIssue } from "../handlers/create-issue.js";
 import { handleUpdateIssue } from "../handlers/update-issue.js";
 import { handleQueryIssues } from "../handlers/query-issues.js";
+import { handleListProjectVersions } from "../handlers/list-project-versions.js";
 
 const jiraAdfDocInputSchemaProperty = {
   type: "object" as const,
@@ -61,7 +62,8 @@ export function registerTools(server: Server): void {
       },
       {
         name: "get_issue",
-        description: "Get details of a specific Jira issue by ID or key (e.g., PROJ-123).",
+        description:
+          "Get details of a specific Jira issue by ID or key (e.g., PROJ-123). Includes fixVersions when set on the issue.",
         inputSchema: {
           type: "object",
           properties: {
@@ -74,9 +76,23 @@ export function registerTools(server: Server): void {
         },
       },
       {
+        name: "list_project_versions",
+        description:
+          "List all Jira fix versions for a project (released and unreleased). Use id, name, or selectableLabel when setting fix_versions on create_issue or update_issue. Does not create versions.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            project: {
+              type: "string",
+              description: "Optional project key; defaults to JIRA_PROJECT_KEY",
+            },
+          },
+        },
+      },
+      {
         name: "create_issue",
         description:
-          "Create a new Jira issue. Description must be ADF (Atlassian Document Format). Uses default values from the configuration file when not specified. Optional status sets workflow status after create via a transition (must match a destination status name available from the initial state).",
+          "Create a new Jira issue. Description must be ADF (Atlassian Document Format). Uses default values from the configuration file when not specified. Optional fix_versions: pass [] to skip defaults.fix_versions and leave fix versions unset. Optional status sets workflow status after create via a transition (must match a destination status name available from the initial state).",
         inputSchema: {
           type: "object",
           properties: {
@@ -115,6 +131,12 @@ export function registerTools(server: Server): void {
             reporter: {
               type: "string",
               description: "Reporter account ID",
+            },
+            fix_versions: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "Fix version names, version ids, or selectableLabel strings from list_project_versions. Unknown values are skipped (issue still created); see fixVersionsSkipped in the response. Omit to use defaults.fix_versions from issue-config when configured.",
             },
             status: {
               type: "string",
@@ -163,7 +185,7 @@ export function registerTools(server: Server): void {
       {
         name: "update_issue",
         description:
-          "Update an existing Jira issue. Only provided fields will be updated. When setting description, pass ADF (reuse descriptionAdf from get_issue when possible). Status changes use workflow transitions (not the edit-fields API); provide the target status name as it appears in Jira.",
+          "Update an existing Jira issue. Only provided fields will be updated. When setting description, pass ADF (reuse descriptionAdf from get_issue when possible). fix_versions replaces the set of fix versions; pass [] to clear them. Status changes use workflow transitions (not the edit-fields API); provide the target status name as it appears in Jira.",
         inputSchema: {
           type: "object",
           properties: {
@@ -197,6 +219,12 @@ export function registerTools(server: Server): void {
             assignee: {
               type: "string",
               description: "New assignee account ID, or null to unassign",
+            },
+            fix_versions: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "Replace fix versions with this list (names, ids, or selectableLabel from list_project_versions). Pass [] to clear. Omit to leave fix versions unchanged.",
             },
             status: {
               type: "string",
@@ -232,6 +260,14 @@ export function registerTools(server: Server): void {
           return await handleGetIssue(validated.id);
         }
 
+        case "list_project_versions": {
+          const schema = z.object({
+            project: z.string().min(1).optional(),
+          });
+          const validated = schema.parse(args || {});
+          return await handleListProjectVersions(validated.project);
+        }
+
         case "create_issue": {
           const schema = z.object({
             title: z.string().min(1),
@@ -243,6 +279,7 @@ export function registerTools(server: Server): void {
             components: z.array(z.string()).optional(),
             assignee: z.union([z.string(), z.null()]).optional(),
             reporter: z.string().optional(),
+            fix_versions: z.array(z.string()).optional(),
             status: z.string().optional(),
           });
           const validated = schema.parse(args || {});
@@ -259,6 +296,7 @@ export function registerTools(server: Server): void {
             labels: z.array(z.string()).optional(),
             components: z.array(z.string()).optional(),
             assignee: z.union([z.string(), z.null()]).optional(),
+            fix_versions: z.array(z.string()).optional(),
             status: z.string().optional(),
           });
           const validated = schema.parse(args || {});
