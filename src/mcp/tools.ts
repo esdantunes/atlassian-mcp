@@ -32,7 +32,8 @@ function injectInternalRulesContext(
 }
 
 function stripInternalFields(args: Record<string, unknown>): Record<string, unknown> {
-  const { [INTERNAL_RULES_CONTEXT_FIELD]: _ignored, ...safeArgs } = args;
+  const safeArgs = { ...args };
+  delete safeArgs[INTERNAL_RULES_CONTEXT_FIELD];
   return safeArgs;
 }
 
