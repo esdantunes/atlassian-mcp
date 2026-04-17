@@ -10,6 +10,31 @@ import { handleCreateIssue } from "../handlers/create-issue.js";
 import { handleUpdateIssue } from "../handlers/update-issue.js";
 import { handleQueryIssues } from "../handlers/query-issues.js";
 import { handleListProjectVersions } from "../handlers/list-project-versions.js";
+import { rulesContext } from "../config/rules-context.js";
+
+const INTERNAL_RULES_CONTEXT_FIELD = "_rulesContext";
+
+function normalizeToolArgs(args: unknown): Record<string, unknown> {
+  if (args && typeof args === "object" && !Array.isArray(args)) {
+    return args as Record<string, unknown>;
+  }
+  return {};
+}
+
+function injectInternalRulesContext(
+  args: Record<string, unknown>
+): Record<string, unknown> {
+  if (!rulesContext) return args;
+  return {
+    ...args,
+    [INTERNAL_RULES_CONTEXT_FIELD]: rulesContext,
+  };
+}
+
+function stripInternalFields(args: Record<string, unknown>): Record<string, unknown> {
+  const { [INTERNAL_RULES_CONTEXT_FIELD]: _ignored, ...safeArgs } = args;
+  return safeArgs;
+}
 
 const jiraAdfDocInputSchemaProperty = {
   type: "object" as const,
@@ -240,6 +265,9 @@ export function registerTools(server: Server): void {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+    const normalizedArgs = normalizeToolArgs(args);
+    const enrichedArgs = injectInternalRulesContext(normalizedArgs);
+    const safeArgs = stripInternalFields(enrichedArgs);
 
     try {
       switch (name) {
@@ -248,7 +276,7 @@ export function registerTools(server: Server): void {
             maxResults: z.number().int().min(1).max(5000).optional(),
             nextPageToken: z.string().optional(),
           });
-          const validated = schema.parse(args || {});
+          const validated = schema.parse(safeArgs);
           return await handleListIssues(validated);
         }
 
@@ -256,7 +284,7 @@ export function registerTools(server: Server): void {
           const schema = z.object({
             id: z.string().min(1),
           });
-          const validated = schema.parse(args || {});
+          const validated = schema.parse(safeArgs);
           return await handleGetIssue(validated.id);
         }
 
@@ -264,7 +292,7 @@ export function registerTools(server: Server): void {
           const schema = z.object({
             project: z.string().min(1).optional(),
           });
-          const validated = schema.parse(args || {});
+          const validated = schema.parse(safeArgs);
           return await handleListProjectVersions(validated.project);
         }
 
@@ -282,7 +310,7 @@ export function registerTools(server: Server): void {
             fix_versions: z.array(z.string()).optional(),
             status: z.string().optional(),
           });
-          const validated = schema.parse(args || {});
+          const validated = schema.parse(safeArgs);
           return await handleCreateIssue(validated);
         }
 
@@ -299,7 +327,7 @@ export function registerTools(server: Server): void {
             fix_versions: z.array(z.string()).optional(),
             status: z.string().optional(),
           });
-          const validated = schema.parse(args || {});
+          const validated = schema.parse(safeArgs);
           return await handleUpdateIssue(validated);
         }
 
@@ -311,7 +339,7 @@ export function registerTools(server: Server): void {
             nextPageToken: z.string().optional(),
             project: z.string().min(1).optional(),
           });
-          const validated = schema.parse(args || {});
+          const validated = schema.parse(safeArgs);
           return await handleQueryIssues(validated);
         }
 

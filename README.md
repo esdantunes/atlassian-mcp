@@ -48,7 +48,8 @@ Use the same MCP block in both clients:
         "JIRA_EMAIL": "${JIRA_EMAIL}",
         "JIRA_API_TOKEN": "${JIRA_API_TOKEN}",
         "JIRA_PROJECT_KEY": "${JIRA_PROJECT_KEY}",
-        "ISSUE_CONFIG_PATH": "${ISSUE_CONFIG_PATH}"
+        "ISSUE_CONFIG_PATH": "${ISSUE_CONFIG_PATH}",
+        "RULES": "${RULES}"
       }
     }
   }
@@ -61,16 +62,20 @@ Use the same MCP block in both clients:
 
 ## Environment variables
 
-Required:
+### Required:
 
 - `JIRA_HOST` (example: `https://company.atlassian.net`)
 - `JIRA_EMAIL`
 - `JIRA_API_TOKEN`
 - `JIRA_PROJECT_KEY`
 
-Optional:
+### Optional
 
 - `ISSUE_CONFIG_PATH` (defaults to `issue-config.yml` in current working directory)
+- `RULES` (optional path to a markdown file with project-specific guidance, for example `./RULES.md`)
+
+RULES.md guidance:
+  You can provide a markdown file with project conventions (for example, issue writing style, mandatory formatting rules, or workflow-specific guardrails) and point to it using `RULES`.
 
 ## Issue defaults config
 
