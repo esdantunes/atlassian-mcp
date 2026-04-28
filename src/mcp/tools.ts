@@ -12,6 +12,7 @@ import { handleQueryIssues } from "../handlers/query-issues.js";
 import { handleListProjectVersions } from "../handlers/list-project-versions.js";
 import { handleReadConfluencePages } from "../handlers/read-confluence-pages.js";
 import { handleCreateConfluencePage } from "../handlers/create-confluence-page.js";
+import { handleUpdateConfluencePage } from "../handlers/update-confluence-page.js";
 import { rulesContext } from "../config/rules-context.js";
 
 const INTERNAL_RULES_CONTEXT_FIELD = "_rulesContext";
@@ -84,7 +85,7 @@ const readConfluencePagesSchema = z
 
     if (modeCount !== 1) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message:
           "Exactly one read mode is required: pageId OR title (optional spaceKey/default CONFLUENCE_SPACE_KEY) OR cql",
       });
@@ -92,21 +93,21 @@ const readConfluencePagesSchema = z
 
     if (value.spaceKey && !value.title) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "spaceKey requires title when not using pageId or cql",
       });
     }
 
     if (value.nextPageToken && !hasCql) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "nextPageToken is only allowed with cql mode",
       });
     }
 
     if (value.maxResults !== undefined && !hasCql) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "maxResults is only allowed with cql mode",
       });
     }
@@ -118,6 +119,34 @@ const createConfluencePageSchema = z.object({
   content: z.string().min(1),
   parentId: z.string().min(1).optional(),
 });
+
+const updateConfluencePageSchema = z
+  .object({
+    pageId: z.string().min(1).optional(),
+    spaceKey: z.string().min(1).optional(),
+    title: z.string().min(1).optional(),
+    content: z.string().min(1),
+    newTitle: z.string().min(1).optional(),
+  })
+  .superRefine((value, ctx) => {
+    const hasPageId = Boolean(value.pageId);
+    const hasSpaceTitle = Boolean(value.spaceKey && value.title);
+    const modeCount = [hasPageId, hasSpaceTitle].filter(Boolean).length;
+
+    if (modeCount !== 1) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Exactly one update mode is required: pageId OR (spaceKey + title)",
+      });
+    }
+
+    if ((value.spaceKey && !value.title) || (!value.spaceKey && value.title)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "spaceKey and title must be provided together in title mode",
+      });
+    }
+  });
 
 export function registerTools(server: Server): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -385,6 +414,37 @@ export function registerTools(server: Server): void {
           required: ["title", "content"],
         },
       },
+      {
+        name: "update_confluence_page",
+        description:
+          "Update an existing Confluence page by pageId or by spaceKey+title. Replaces page body with storage-format XHTML content.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            pageId: {
+              type: "string",
+              description: "Confluence page ID (update-by-id mode)",
+            },
+            spaceKey: {
+              type: "string",
+              description: "Confluence space key (required with title mode)",
+            },
+            title: {
+              type: "string",
+              description: "Confluence page title to resolve the target page (with spaceKey)",
+            },
+            content: {
+              type: "string",
+              description: "New full page body in Confluence storage XHTML format",
+            },
+            newTitle: {
+              type: "string",
+              description: "Optional new title applied in the same update request",
+            },
+          },
+          required: ["content"],
+        },
+      },
     ],
   }));
 
@@ -476,6 +536,11 @@ export function registerTools(server: Server): void {
         case "create_confluence_page": {
           const validated = createConfluencePageSchema.parse(safeArgs);
           return await handleCreateConfluencePage(validated);
+        }
+
+        case "update_confluence_page": {
+          const validated = updateConfluencePageSchema.parse(safeArgs);
+          return await handleUpdateConfluencePage(validated);
         }
 
         default:

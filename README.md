@@ -40,7 +40,7 @@ Use the same MCP block in both clients:
 ```json
 {
   "mcpServers": {
-    "atlassian-jira": {
+    "atlassian": {
       "command": "npx",
       "args": ["-y", "@esdantunes/atlassian-mcp@latest"],
       "env": {
@@ -72,7 +72,7 @@ Use the same MCP block in both clients:
 
 ### Optional
 
-- `CONFLUENCE_SPACE_KEY` (default Confluence space key for read-by-title and create-page tools)
+- `CONFLUENCE_SPACE_KEY` (default Confluence space key for read-by-title/create/update-title-mode tools)
 - `ISSUE_CONFIG_PATH` (defaults to `issue-config.yml` in current working directory)
 - `RULES` (optional path to a markdown file with project-specific guidance, for example `./RULES.md`)
 
@@ -99,7 +99,7 @@ Detailed behavior, tool inputs, and schema-level contract live in:
 Current MCP tool families:
 
 - Jira: list/get/query/create/update issues and list project versions
-- Confluence: read pages (`read_confluence_pages`) and create pages (`create_confluence_page`)
+- Confluence: read pages (`read_confluence_pages`), create pages (`create_confluence_page`), and update pages (`update_confluence_page`)
 
 ## License
 

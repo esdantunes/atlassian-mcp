@@ -357,3 +357,145 @@ export async function createConfluencePage(args: {
     status: typeof created.status === "string" ? created.status : undefined,
   };
 }
+
+interface ConfluenceUpdateTarget {
+  id: string;
+  title: string;
+  spaceKey?: string;
+  version?: number;
+  status?: string;
+  url?: string;
+}
+
+function toUpdateTarget(page: unknown, host: string): ConfluenceUpdateTarget {
+  const content = (page ?? {}) as {
+    id?: unknown;
+    title?: unknown;
+    status?: unknown;
+    space?: { key?: unknown };
+    version?: { number?: unknown };
+    _links?: unknown;
+  };
+
+  return {
+    id: String(content.id ?? ""),
+    title: typeof content.title === "string" ? content.title : "",
+    spaceKey: typeof content.space?.key === "string" ? content.space.key : undefined,
+    version:
+      typeof content.version?.number === "number" ? content.version.number : undefined,
+    status: typeof content.status === "string" ? content.status : undefined,
+    url: toAbsoluteUrl(host, content._links),
+  };
+}
+
+export async function getConfluencePageUpdateTargetById(
+  pageId: string
+): Promise<ConfluenceUpdateTarget | null> {
+  const host = normalizeAtlassianHost(getRequiredEnv("JIRA_HOST"));
+  try {
+    const page = await confluenceRequest(
+      `/wiki/rest/api/content/${encodeURIComponent(pageId)}?expand=${encodeURIComponent("version,space")}`
+    );
+    return toUpdateTarget(page, host);
+  } catch (error: unknown) {
+    const ex = error as { status?: number; response?: { status?: number } };
+    const status = ex.status ?? ex.response?.status;
+    if (status === 404) return null;
+    throw error;
+  }
+}
+
+export async function findConfluencePageUpdateTargetByTitle(
+  spaceKey: string,
+  title: string
+): Promise<ConfluenceUpdateTarget | null> {
+  const host = normalizeAtlassianHost(getRequiredEnv("JIRA_HOST"));
+  const query = new URLSearchParams({
+    type: "page",
+    spaceKey,
+    title,
+    expand: "version,space",
+    limit: "1",
+  });
+
+  const result = (await confluenceRequest(
+    `/wiki/rest/api/content?${query.toString()}`
+  )) as { results?: unknown[] };
+  const first = Array.isArray(result.results) ? result.results[0] : undefined;
+  return first ? toUpdateTarget(first, host) : null;
+}
+
+export async function updateConfluencePageById(args: {
+  pageId: string;
+  content: string;
+  newTitle?: string;
+}): Promise<{
+  id: string;
+  title: string;
+  spaceKey?: string;
+  url?: string;
+  version?: number;
+  status?: string;
+  updated: true;
+}> {
+  const host = normalizeAtlassianHost(getRequiredEnv("JIRA_HOST"));
+  const target = await getConfluencePageUpdateTargetById(args.pageId);
+
+  if (!target) {
+    throw new Error("Confluence page not found");
+  }
+  if (!target.version) {
+    throw new Error("Failed to read current page version");
+  }
+
+  const updateTitle = args.newTitle?.trim() || target.title;
+  const payload: Record<string, unknown> = {
+    id: target.id,
+    type: "page",
+    title: updateTitle,
+    version: {
+      number: target.version + 1,
+    },
+    body: {
+      storage: {
+        value: args.content,
+        representation: "storage",
+      },
+    },
+  };
+
+  if (target.spaceKey) {
+    payload.space = { key: target.spaceKey };
+  }
+
+  const updated = (await confluenceRequest(
+    `/wiki/rest/api/content/${encodeURIComponent(target.id)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }
+  )) as {
+    id?: unknown;
+    title?: unknown;
+    space?: { key?: unknown };
+    status?: unknown;
+    version?: { number?: unknown };
+    _links?: unknown;
+  };
+
+  return {
+    id: String(updated.id ?? target.id),
+    title: typeof updated.title === "string" ? updated.title : updateTitle,
+    spaceKey:
+      typeof updated.space?.key === "string"
+        ? updated.space.key
+        : target.spaceKey,
+    url: toAbsoluteUrl(host, updated._links) ?? target.url,
+    version:
+      typeof updated.version?.number === "number"
+        ? updated.version.number
+        : target.version + 1,
+    status: typeof updated.status === "string" ? updated.status : target.status,
+    updated: true,
+  };
+}
