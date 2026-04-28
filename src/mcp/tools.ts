@@ -70,6 +70,7 @@ const jiraAdfDocumentSchema = z
 const readConfluencePagesSchema = z
   .object({
     pageId: z.string().min(1).optional(),
+    version: z.number().int().min(1).optional(),
     spaceKey: z.string().min(1).optional(),
     title: z.string().min(1).optional(),
     cql: z.string().min(1).optional(),
@@ -109,6 +110,13 @@ const readConfluencePagesSchema = z
       ctx.addIssue({
         code: "custom",
         message: "maxResults is only allowed with cql mode",
+      });
+    }
+
+    if (value.version !== undefined && hasCql) {
+      ctx.addIssue({
+        code: "custom",
+        message: "version is not supported with cql mode",
       });
     }
   });
@@ -355,6 +363,12 @@ export function registerTools(server: Server): void {
             pageId: {
               type: "string",
               description: "Confluence page ID (single-page lookup mode)",
+            },
+            version: {
+              type: "number",
+              description:
+                "Optional Confluence page version number for historical read (supported with pageId or title mode)",
+              minimum: 1,
             },
             spaceKey: {
               type: "string",

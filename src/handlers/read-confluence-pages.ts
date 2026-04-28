@@ -9,6 +9,7 @@ type BodyFormat = "storage" | "view" | "none";
 
 interface ReadConfluencePagesArgs {
   pageId?: string;
+  version?: number;
   spaceKey?: string;
   title?: string;
   cql?: string;
@@ -31,7 +32,7 @@ export async function handleReadConfluencePages(
 
   try {
     if (args.pageId) {
-      const page = await getConfluencePageById(args.pageId, bodyFormat);
+      const page = await getConfluencePageById(args.pageId, bodyFormat, args.version);
       if (!page) {
         return {
           content: [
@@ -99,6 +100,37 @@ export async function handleReadConfluencePages(
           },
         ],
         isError: true,
+      };
+    }
+
+    if (args.version) {
+      const historicalPage = await getConfluencePageById(
+        page.id,
+        bodyFormat,
+        args.version
+      );
+      if (!historicalPage) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                error: "Confluence page version not found",
+                search: { spaceKey, title, version: args.version },
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ page: historicalPage }, null, 2),
+          },
+        ],
       };
     }
 

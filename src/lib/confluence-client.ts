@@ -232,7 +232,8 @@ export async function confluenceRequest(
 
 export async function getConfluencePageById(
   pageId: string,
-  bodyFormat: ConfluenceBodyFormat
+  bodyFormat: ConfluenceBodyFormat,
+  version?: number
 ): Promise<ConfluencePageSummary | null> {
   const host = normalizeAtlassianHost(getRequiredEnv("JIRA_HOST"));
   const expand =
@@ -242,8 +243,43 @@ export async function getConfluencePageById(
         ? "version,space,history.lastUpdated,body.view"
         : "version,space,history.lastUpdated";
   try {
+    if (typeof version === "number") {
+      const query = new URLSearchParams({
+        expand:
+          bodyFormat === "storage"
+            ? "content.space,content.history.lastUpdated,content.body.storage"
+            : bodyFormat === "view"
+              ? "content.space,content.history.lastUpdated,content.body.view"
+              : "content.space,content.history.lastUpdated",
+      });
+
+      const versionResult = (await confluenceRequest(
+        `/wiki/rest/api/content/${encodeURIComponent(pageId)}/version/${version}?${query.toString()}`
+      )) as {
+        by?: { displayName?: unknown };
+        when?: unknown;
+        number?: unknown;
+        content?: Record<string, unknown>;
+      };
+
+      const contentWithVersion = {
+        ...(versionResult.content ?? {}),
+        version: {
+          number:
+            typeof versionResult.number === "number"
+              ? versionResult.number
+              : version,
+          by: versionResult.by,
+          when: versionResult.when,
+        },
+      };
+
+      return toPageSummary(contentWithVersion, bodyFormat, host);
+    }
+
+    const query = new URLSearchParams({ expand });
     const page = await confluenceRequest(
-      `/wiki/rest/api/content/${encodeURIComponent(pageId)}?expand=${encodeURIComponent(expand)}`
+      `/wiki/rest/api/content/${encodeURIComponent(pageId)}?${query.toString()}`
     );
     return toPageSummary(page, bodyFormat, host);
   } catch (error: unknown) {
