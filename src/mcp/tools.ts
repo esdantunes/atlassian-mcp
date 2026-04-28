@@ -126,6 +126,7 @@ const createConfluencePageSchema = z.object({
   title: z.string().min(1),
   content: z.string().min(1),
   parentId: z.string().min(1).optional(),
+  draft: z.boolean().optional(),
 });
 
 const updateConfluencePageSchema = z
@@ -403,7 +404,7 @@ export function registerTools(server: Server): void {
       {
         name: "create_confluence_page",
         description:
-          "Create a new Confluence page (create-only). Rejects title conflicts in the same space and does not update existing pages.",
+          "Create a new Confluence page (create-only). Rejects title conflicts in the same space and does not update existing pages. Supports draft mode when draft=true.",
         inputSchema: {
           type: "object",
           properties: {
@@ -423,6 +424,11 @@ export function registerTools(server: Server): void {
             parentId: {
               type: "string",
               description: "Optional parent page ID",
+            },
+            draft: {
+              type: "boolean",
+              description:
+                "Optional. When true, creates the page as draft instead of publishing immediately.",
             },
           },
           required: ["title", "content"],

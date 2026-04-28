@@ -353,6 +353,7 @@ export async function createConfluencePage(args: {
   title: string;
   content: string;
   parentId?: string;
+  draft?: boolean;
 }): Promise<{ id: string; title: string; spaceKey?: string; url?: string; version?: number; status?: string }> {
   const host = normalizeAtlassianHost(getRequiredEnv("JIRA_HOST"));
   const body: Record<string, unknown> = {
@@ -367,11 +368,16 @@ export async function createConfluencePage(args: {
     },
   };
 
+  if (args.draft === true) {
+    body.status = "draft";
+  }
+
   if (args.parentId) {
     body.ancestors = [{ id: args.parentId }];
   }
 
-  const created = (await confluenceRequest("/wiki/rest/api/content", {
+  const path = args.draft === true ? "/wiki/rest/api/content?status=draft" : "/wiki/rest/api/content";
+  const created = (await confluenceRequest(path, {
     method: "POST",
     body: JSON.stringify(body),
   })) as {

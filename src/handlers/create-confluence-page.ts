@@ -9,6 +9,7 @@ interface CreateConfluencePageArgs {
   title: string;
   content: string;
   parentId?: string;
+  draft?: boolean;
 }
 
 function resolveSpaceKey(spaceKey?: string): string | undefined {
@@ -66,6 +67,7 @@ export async function handleCreateConfluencePage(
       title,
       content: args.content,
       parentId: args.parentId,
+      draft: args.draft,
     });
 
     return {
