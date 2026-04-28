@@ -35,6 +35,11 @@
       "envVar": "JIRA_PROJECT_KEY"
     },
     {
+      "name": "Confluence Space Key",
+      "description": "Default Confluence space key for create/read-by-title flows (optional)",
+      "envVar": "CONFLUENCE_SPACE_KEY"
+    },
+    {
       "name": "Config Path",
       "description": "Path to issue-config.yml (optional)",
       "envVar": "ISSUE_CONFIG_PATH"

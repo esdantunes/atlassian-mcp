@@ -10,6 +10,8 @@ import { handleCreateIssue } from "../handlers/create-issue.js";
 import { handleUpdateIssue } from "../handlers/update-issue.js";
 import { handleQueryIssues } from "../handlers/query-issues.js";
 import { handleListProjectVersions } from "../handlers/list-project-versions.js";
+import { handleReadConfluencePages } from "../handlers/read-confluence-pages.js";
+import { handleCreateConfluencePage } from "../handlers/create-confluence-page.js";
 import { rulesContext } from "../config/rules-context.js";
 
 const INTERNAL_RULES_CONTEXT_FIELD = "_rulesContext";
@@ -63,6 +65,59 @@ const jiraAdfDocumentSchema = z
     content: z.array(z.record(z.string(), z.unknown())),
   })
   .passthrough();
+
+const readConfluencePagesSchema = z
+  .object({
+    pageId: z.string().min(1).optional(),
+    spaceKey: z.string().min(1).optional(),
+    title: z.string().min(1).optional(),
+    cql: z.string().min(1).optional(),
+    maxResults: z.number().int().min(1).max(100).optional(),
+    nextPageToken: z.string().optional(),
+    bodyFormat: z.enum(["storage", "view", "none"]).optional(),
+  })
+  .superRefine((value, ctx) => {
+    const hasPageId = Boolean(value.pageId);
+    const hasTitleMode = Boolean(value.title);
+    const hasCql = Boolean(value.cql);
+    const modeCount = [hasPageId, hasTitleMode, hasCql].filter(Boolean).length;
+
+    if (modeCount !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Exactly one read mode is required: pageId OR title (optional spaceKey/default CONFLUENCE_SPACE_KEY) OR cql",
+      });
+    }
+
+    if (value.spaceKey && !value.title) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "spaceKey requires title when not using pageId or cql",
+      });
+    }
+
+    if (value.nextPageToken && !hasCql) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "nextPageToken is only allowed with cql mode",
+      });
+    }
+
+    if (value.maxResults !== undefined && !hasCql) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "maxResults is only allowed with cql mode",
+      });
+    }
+  });
+
+const createConfluencePageSchema = z.object({
+  spaceKey: z.string().min(1).optional(),
+  title: z.string().min(1),
+  content: z.string().min(1),
+  parentId: z.string().min(1).optional(),
+});
 
 export function registerTools(server: Server): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -261,6 +316,75 @@ export function registerTools(server: Server): void {
           required: ["id"],
         },
       },
+      {
+        name: "read_confluence_pages",
+        description:
+          "Read Confluence pages using one of three modes: pageId, spaceKey+title, or CQL search with pagination. pageId/title mode returns a single page object; CQL mode returns paginated items.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            pageId: {
+              type: "string",
+              description: "Confluence page ID (single-page lookup mode)",
+            },
+            spaceKey: {
+              type: "string",
+              description: "Confluence space key (required with title mode)",
+            },
+            title: {
+              type: "string",
+              description: "Confluence page title (required with spaceKey mode)",
+            },
+            cql: {
+              type: "string",
+              description: "Confluence Query Language expression for search mode",
+            },
+            maxResults: {
+              type: "number",
+              description: "CQL mode only. Maximum results per page (default: 25, max: 100)",
+              minimum: 1,
+              maximum: 100,
+            },
+            nextPageToken: {
+              type: "string",
+              description: "CQL mode only. Pagination token from previous response",
+            },
+            bodyFormat: {
+              type: "string",
+              description: "Body format for pageId/title mode. Defaults to storage",
+              enum: ["storage", "view", "none"],
+            },
+          },
+        },
+      },
+      {
+        name: "create_confluence_page",
+        description:
+          "Create a new Confluence page (create-only). Rejects title conflicts in the same space and does not update existing pages.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spaceKey: {
+              type: "string",
+              description:
+                "Confluence space key. Optional when CONFLUENCE_SPACE_KEY is configured",
+            },
+            title: {
+              type: "string",
+              description: "New Confluence page title",
+            },
+            content: {
+              type: "string",
+              description: "Page body as storage-format XHTML content",
+            },
+            parentId: {
+              type: "string",
+              description: "Optional parent page ID",
+            },
+          },
+          required: ["title", "content"],
+        },
+      },
     ],
   }));
 
@@ -342,6 +466,16 @@ export function registerTools(server: Server): void {
           });
           const validated = schema.parse(safeArgs);
           return await handleQueryIssues(validated);
+        }
+
+        case "read_confluence_pages": {
+          const validated = readConfluencePagesSchema.parse(safeArgs);
+          return await handleReadConfluencePages(validated);
+        }
+
+        case "create_confluence_page": {
+          const validated = createConfluencePageSchema.parse(safeArgs);
+          return await handleCreateConfluencePage(validated);
         }
 
         default:

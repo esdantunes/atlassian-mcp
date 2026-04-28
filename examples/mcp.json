@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "atlassian-jira": {
+    "atlassian": {
       "command": "npx",
       "args": ["-y", "@esdantunes/atlassian-mcp@latest"],
       "env": {
@@ -8,6 +8,7 @@
         "JIRA_EMAIL": "${JIRA_EMAIL}",
         "JIRA_API_TOKEN": "${JIRA_API_TOKEN}",
         "JIRA_PROJECT_KEY": "${JIRA_PROJECT_KEY}",
+        "CONFLUENCE_SPACE_KEY": "${CONFLUENCE_SPACE_KEY}",
         "ISSUE_CONFIG_PATH": "${ISSUE_CONFIG_PATH}"
       }
     }

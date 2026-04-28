@@ -7,7 +7,7 @@ Also: this was my first MCP project, so part painkiller, part learning-by-fire.
 
 ## Why this exists
 
-- Interact with Jira Cloud through MCP using practical tool inputs
+- Interact with Jira and Confluence Cloud through MCP using practical tool inputs
 - Keep automation scoped to specific projects and defaults
 - Avoid broad, risky org-wide actions by design
 
@@ -48,6 +48,7 @@ Use the same MCP block in both clients:
         "JIRA_EMAIL": "${JIRA_EMAIL}",
         "JIRA_API_TOKEN": "${JIRA_API_TOKEN}",
         "JIRA_PROJECT_KEY": "${JIRA_PROJECT_KEY}",
+        "CONFLUENCE_SPACE_KEY": "${CONFLUENCE_SPACE_KEY}",
         "ISSUE_CONFIG_PATH": "${ISSUE_CONFIG_PATH}",
         "RULES": "${RULES}"
       }
@@ -71,6 +72,7 @@ Use the same MCP block in both clients:
 
 ### Optional
 
+- `CONFLUENCE_SPACE_KEY` (default Confluence space key for read-by-title and create-page tools)
 - `ISSUE_CONFIG_PATH` (defaults to `issue-config.yml` in current working directory)
 - `RULES` (optional path to a markdown file with project-specific guidance, for example `./RULES.md`)
 
@@ -93,6 +95,11 @@ This README is intentionally short.
 Detailed behavior, tool inputs, and schema-level contract live in:
 
 - `src/mcp/tools.ts`
+
+Current MCP tool families:
+
+- Jira: list/get/query/create/update issues and list project versions
+- Confluence: read pages (`read_confluence_pages`) and create pages (`create_confluence_page`)
 
 ## License
 
