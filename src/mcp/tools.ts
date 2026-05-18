@@ -8,6 +8,9 @@ import { handleListIssues } from "../handlers/list-issues.js";
 import { handleGetIssue } from "../handlers/get-issue.js";
 import { handleCreateIssue } from "../handlers/create-issue.js";
 import { handleUpdateIssue } from "../handlers/update-issue.js";
+import { handleListIssueComments } from "../handlers/list-issue-comments.js";
+import { handleCreateIssueComment } from "../handlers/create-issue-comment.js";
+import { handleUpdateIssueComment } from "../handlers/update-issue-comment.js";
 import { handleQueryIssues } from "../handlers/query-issues.js";
 import { handleListProjectVersions } from "../handlers/list-project-versions.js";
 import { handleReadConfluencePages } from "../handlers/read-confluence-pages.js";
@@ -355,6 +358,82 @@ export function registerTools(server: Server): void {
         },
       },
       {
+        name: "list_issue_comments",
+        description:
+          "List comments on a Jira issue with offset pagination. Returns simplified comments including bodyAdf when available.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            issueIdOrKey: {
+              type: "string",
+              description: "Issue ID or key (e.g., PROJ-123)",
+            },
+            startAt: {
+              type: "number",
+              description: "Page offset for pagination (default: 0)",
+              minimum: 0,
+            },
+            maxResults: {
+              type: "number",
+              description: "Maximum comments per page (default: 50, max: 100)",
+              minimum: 1,
+              maximum: 100,
+            },
+            orderBy: {
+              type: "string",
+              description: "Sort order for comments (default: created ascending)",
+              enum: ["created", "-created", "+created"],
+            },
+          },
+          required: ["issueIdOrKey"],
+        },
+      },
+      {
+        name: "create_issue_comment",
+        description:
+          "Add a comment to a Jira issue. Body must be ADF (Atlassian Document Format). Optionally reply to a parent comment via parentId.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            issueIdOrKey: {
+              type: "string",
+              description: "Issue ID or key (e.g., PROJ-123)",
+            },
+            body: jiraAdfDocInputSchemaProperty,
+            parentId: {
+              type: "string",
+              description: "Optional parent comment ID for threaded replies",
+            },
+          },
+          required: ["issueIdOrKey", "body"],
+        },
+      },
+      {
+        name: "update_issue_comment",
+        description:
+          "Update an existing Jira issue comment body. Body must be ADF. Requires permission to edit the comment.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            issueIdOrKey: {
+              type: "string",
+              description: "Issue ID or key (e.g., PROJ-123)",
+            },
+            commentId: {
+              type: "string",
+              description: "Comment ID to update",
+            },
+            body: jiraAdfDocInputSchemaProperty,
+            notifyUsers: {
+              type: "boolean",
+              description:
+                "Whether users are notified when the comment is updated (default: true)",
+            },
+          },
+          required: ["issueIdOrKey", "commentId", "body"],
+        },
+      },
+      {
         name: "read_confluence_pages",
         description:
           "Read Confluence pages using one of three modes: pageId, spaceKey+title, or CQL search with pagination. pageId/title mode returns a single page object; CQL mode returns paginated items.",
@@ -534,6 +613,38 @@ export function registerTools(server: Server): void {
           });
           const validated = schema.parse(safeArgs);
           return await handleUpdateIssue(validated);
+        }
+
+        case "list_issue_comments": {
+          const schema = z.object({
+            issueIdOrKey: z.string().min(1),
+            startAt: z.number().int().min(0).optional(),
+            maxResults: z.number().int().min(1).max(100).optional(),
+            orderBy: z.enum(["created", "-created", "+created"]).optional(),
+          });
+          const validated = schema.parse(safeArgs);
+          return await handleListIssueComments(validated);
+        }
+
+        case "create_issue_comment": {
+          const schema = z.object({
+            issueIdOrKey: z.string().min(1),
+            body: jiraAdfDocumentSchema,
+            parentId: z.string().min(1).optional(),
+          });
+          const validated = schema.parse(safeArgs);
+          return await handleCreateIssueComment(validated);
+        }
+
+        case "update_issue_comment": {
+          const schema = z.object({
+            issueIdOrKey: z.string().min(1),
+            commentId: z.string().min(1),
+            body: jiraAdfDocumentSchema,
+            notifyUsers: z.boolean().optional(),
+          });
+          const validated = schema.parse(safeArgs);
+          return await handleUpdateIssueComment(validated);
         }
 
         case "query_issues": {

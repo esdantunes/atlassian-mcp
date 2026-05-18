@@ -98,7 +98,7 @@ Detailed behavior, tool inputs, and schema-level contract live in:
 
 Current MCP tool families:
 
-- Jira: list/get/query/create/update issues and list project versions
+- Jira: list/get/query/create/update issues, list/create/update issue comments, and list project versions
 - Confluence: read pages (`read_confluence_pages`), create pages (`create_confluence_page`), and update pages (`update_confluence_page`)
 
 ## License
